@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A11yGo - Accesibilidad Web</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="header">
+    <h1 class="title">A11yGo</h1>
+    <nav aria-label="Selector de idioma">
+      <label for="languageSelect" class="visually-hidden">Seleccionar idioma de la interfaz</label>
+      <select id="languageSelect" aria-label="Seleccionar idioma">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+      </select>
+    </nav>
+  </header>
+
+  <main class="main">
+    <section class="functions" aria-label="Funciones de accesibilidad disponibles">
+      <h2 class="visually-hidden">Herramientas de accesibilidad</h2>
+      <ul class="functions-list" role="list">
+        <li>
+          <button id="textReaderBtn" class="function-btn" data-i18n="textReader" aria-describedby="textReaderDesc">
+            <span class="btn-icon" aria-hidden="true">📖</span>
+            <span class="btn-text">Lector de Texto</span>
+          </button>
+          <span id="textReaderDesc" class="visually-hidden">Activa el lector de texto para leer contenido de la página</span>
+        </li>
+
+        <li>
+          <button id="keyboardNavBtn" class="function-btn" data-i18n="keyboardNav" aria-describedby="keyboardNavDesc">
+            <span class="btn-icon" aria-hidden="true">⌨️</span>
+            <span class="btn-text">Navegación por Teclado</span>
+          </button>
+          <span id="keyboardNavDesc" class="visually-hidden">Activa la navegación mejorada por teclado</span>
+        </li>
+
+        <li>
+          <button id="visualNavBtn" class="function-btn" data-i18n="visualNav" aria-describedby="visualNavDesc">
+            <span class="btn-icon" aria-hidden="true">👁️</span>
+            <span class="btn-text">Navegación Visual</span>
+          </button>
+          <span id="visualNavDesc" class="visually-hidden">Muestra visualmente los elementos navegables y su orden de tabulación</span>
+        </li>
+
+        <li>
+          <button id="a11yCheckBtn" class="function-btn" data-i18n="a11yCheck" aria-describedby="a11yCheckDesc">
+            <span class="btn-icon" aria-hidden="true">🔍</span>
+            <span class="btn-text">Validar Accesibilidad</span>
+          </button>
+          <span id="a11yCheckDesc" class="visually-hidden">Ejecuta una validación automática de accesibilidad en la página</span>
+        </li>
+
+      </ul>
+    </section>
+
+    <section aria-live="polite" aria-atomic="true">
+      <div id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></div>
+    </section>
+  </main>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

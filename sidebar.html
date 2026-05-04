@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A11yGo Panel - Accesibilidad Web</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <header class="header">
+    <h1 class="title">A11yGo</h1>
+    <button id="closeBtn" class="close-btn" aria-label="Cerrar panel lateral">×</button>
+  </header>
+
+  <main class="main">
+    <!-- Panel de Lector de Texto -->
+    <section id="textReaderPanel" class="panel hidden" aria-labelledby="textReaderHeading">
+      <h2 id="textReaderHeading" data-i18n="textReader">Lector de Texto</h2>
+      <div class="controls">
+        <div class="control-group">
+          <label for="speedControl" data-i18n="speed">Velocidad:</label>
+          <input type="range" id="speedControl" min="0.5" max="2" step="0.1" value="1" aria-valuemin="0.5" aria-valuemax="2" aria-valuenow="1" aria-valuetext="1.0x">
+          <output id="speedValue" for="speedControl" aria-live="polite">1.0x</output>
+        </div>
+        <nav class="button-group" aria-label="Controles de reproducción">
+          <button id="playBtn" class="btn btn-primary" data-i18n="play">Reproducir</button>
+          <button id="pauseBtn" class="btn" data-i18n="pause">Pausar</button>
+          <button id="stopBtn" class="btn" data-i18n="stop">Detener</button>
+        </nav>
+        <div class="info">
+          <p data-i18n="textReaderInfo">Selecciona texto en la página para leerlo o navega con Tab</p>
+        </div>
+        <section class="navigation-history" aria-labelledby="textReaderHistoryHeading">
+          <h3 id="textReaderHistoryHeading" data-i18n="navigationHistory">Historial de Navegación</h3>
+          <ul id="textReaderHistoryList" class="history-list" role="list" aria-label="Historial de elementos leídos"></ul>
+        </section>
+      </div>
+    </section>
+
+    <!-- Panel de Navegación por Teclado -->
+    <section id="keyboardNavPanel" class="panel hidden" aria-labelledby="keyboardNavHeading">
+      <h2 id="keyboardNavHeading" data-i18n="keyboardNav">Navegación por Teclado</h2>
+      <div class="controls">
+        <div class="info">
+          <p data-i18n="keyboardNavInfo">Usa Tab para navegar entre elementos</p>
+        </div>
+        <dl class="stats">
+          <div class="stat">
+            <dt class="stat-label" data-i18n="focusableElements">Elementos navegables:</dt>
+            <dd id="focusableCount" class="stat-value">0</dd>
+          </div>
+          <div class="stat">
+            <dt class="stat-label" data-i18n="currentFocus">Foco actual:</dt>
+            <dd id="currentFocus" class="stat-value">-</dd>
+          </div>
+        </dl>
+        <section class="navigation-history" aria-labelledby="keyboardNavHistoryHeading">
+          <h3 id="keyboardNavHistoryHeading" data-i18n="navigationHistory">Historial de Navegación</h3>
+          <ul id="navigationHistoryList" class="history-list" role="list" aria-label="Historial de elementos navegados"></ul>
+        </section>
+      </div>
+    </section>
+
+    <!-- Panel de Navegación Visual -->
+    <section id="visualNavPanel" class="panel hidden" aria-labelledby="visualNavHeading">
+      <h2 id="visualNavHeading" data-i18n="visualNav">Navegación Visual</h2>
+      <div class="controls">
+        <fieldset class="control-group">
+          <legend class="visually-hidden">Opciones de visualización</legend>
+          <label for="showFocusables">
+            <input type="checkbox" id="showFocusables" checked aria-describedby="showFocusablesDesc">
+            <span data-i18n="showFocusables">Mostrar elementos navegables</span>
+          </label>
+          <span id="showFocusablesDesc" class="visually-hidden">Activa o desactiva la visualización de elementos navegables en la página</span>
+        </fieldset>
+        <fieldset class="control-group">
+          <legend class="visually-hidden">Opciones de orden de tabulación</legend>
+          <label for="showTabOrder">
+            <input type="checkbox" id="showTabOrder" checked aria-describedby="showTabOrderDesc">
+            <span data-i18n="showTabOrder">Mostrar orden de tabulación</span>
+          </label>
+          <span id="showTabOrderDesc" class="visually-hidden">Activa o desactiva la visualización de números de orden de tabulación</span>
+        </fieldset>
+        <fieldset class="control-group">
+          <legend class="visually-hidden">Opciones de resaltado</legend>
+          <label for="highlightFocus">
+            <input type="checkbox" id="highlightFocus" checked aria-describedby="highlightFocusDesc">
+            <span data-i18n="highlightFocus">Resaltar foco</span>
+          </label>
+          <span id="highlightFocusDesc" class="visually-hidden">Activa o desactiva el resaltado del elemento con foco actual</span>
+        </fieldset>
+        <section class="navigation-history" aria-labelledby="visualNavHistoryHeading">
+          <h3 id="visualNavHistoryHeading" data-i18n="navigationHistory">Historial de Navegación</h3>
+          <ul id="visualNavHistoryList" class="history-list" role="list" aria-label="Historial de elementos tabulados"></ul>
+        </section>
+      </div>
+    </section>
+
+    <!-- Panel de Validación de Accesibilidad -->
+    <section id="a11yCheckPanel" class="panel hidden" aria-labelledby="a11yCheckHeading">
+      <h2 id="a11yCheckHeading" data-i18n="a11yCheck">Validar Accesibilidad</h2>
+      <div class="controls">
+        <nav class="button-group" aria-label="Controles de validación">
+          <button id="runCheckBtn" class="btn btn-primary" data-i18n="runCheck">Ejecutar Validación</button>
+          <button id="clearResultsBtn" class="btn" data-i18n="clearResults">Limpiar Resultados</button>
+          <button id="exportReportBtn" class="btn" data-i18n="exportReport">Exportar Reporte</button>
+        </nav>
+        <section id="results" class="results" aria-labelledby="resultsHeading">
+          <h3 id="resultsHeading" class="visually-hidden">Resultados de validación</h3>
+          <dl class="results-summary">
+            <div class="summary-item error">
+              <dt class="summary-label" data-i18n="errors">Errores:</dt>
+              <dd id="errorCount" class="summary-value">0</dd>
+            </div>
+            <div class="summary-item warning">
+              <dt class="summary-label" data-i18n="warnings">Advertencias:</dt>
+              <dd id="warningCount" class="summary-value">0</dd>
+            </div>
+            <div class="summary-item info">
+              <dt class="summary-label" data-i18n="info">Información:</dt>
+              <dd id="infoCount" class="summary-value">0</dd>
+            </div>
+          </dl>
+          <ul id="resultsList" class="results-list" role="list" aria-label="Lista de problemas de accesibilidad encontrados"></ul>
+        </section>
+      </div>
+    </section>
+
+    <!-- Panel por defecto: visible mientras no haya ningún módulo activo -->
+    <section id="defaultPanel" class="panel" aria-labelledby="defaultHeading">
+      <h2 id="defaultHeading">A11yGo</h2>
+      <p>Activa una herramienta desde el popup de la extensión para comenzar.</p>
+    </section>
+  </main>
+
+  <script type="module" src="sidebar.js"></script>
+</body>
+</html>
