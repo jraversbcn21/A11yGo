@@ -1,4 +1,5 @@
 // Sistema de navegación por teclado
+import { calculateTabOrder, compareDOMOrder, getAccessibleName } from './dom-utils.js';
 
 export class KeyboardNav {
   constructor() {
@@ -57,87 +58,12 @@ export class KeyboardNav {
     this.removeTooltip();
   }
 
-  /**
-   * Calcula el orden real de tabulación según WCAG/Axe Core:
-   * 1. Elementos con tabindex positivo (1, 2, 3...) van primero, ordenados ascendente
-   * 2. Elementos con tabindex="0" o sin tabindex van después, en orden DOM
-   * 3. Elementos con tabindex="-1" se excluyen del orden de tabulación
-   * 
-   * Usa compareDocumentPosition para obtener el orden real del navegador
-   */
   calculateTabOrder(elements) {
-    // Obtener tabindex de cada elemento
-    const elementsWithTabIndex = elements.map(el => {
-      const tabIndexAttr = el.getAttribute('tabindex');
-      let tabIndex = null;
-      
-      if (tabIndexAttr !== null) {
-        const parsed = parseInt(tabIndexAttr, 10);
-        if (!isNaN(parsed)) {
-          tabIndex = parsed;
-        }
-      }
-      
-      return {
-        element: el,
-        tabIndex: tabIndex
-      };
-    });
-    
-    // Separar elementos según su tabindex
-    const positiveTabIndex = elementsWithTabIndex.filter(e => e.tabIndex !== null && e.tabIndex > 0);
-    const zeroOrNullTabIndex = elementsWithTabIndex.filter(e => e.tabIndex === null || e.tabIndex === 0);
-    
-    // Ordenar elementos con tabindex positivo por valor ascendente
-    positiveTabIndex.sort((a, b) => {
-      if (a.tabIndex !== b.tabIndex) {
-        return a.tabIndex - b.tabIndex;
-      }
-      // Si tienen el mismo tabindex, usar compareDocumentPosition para orden DOM
-      return this.compareDOMOrder(a.element, b.element);
-    });
-    
-    // Ordenar elementos con tabindex 0 o null por posición DOM usando compareDocumentPosition
-    zeroOrNullTabIndex.sort((a, b) => this.compareDOMOrder(a.element, b.element));
-    
-    // Combinar: primero los positivos, luego los naturales
-    const ordered = [...positiveTabIndex, ...zeroOrNullTabIndex];
-    
-    return ordered.map(e => e.element);
+    return calculateTabOrder(elements);
   }
-  
-  /**
-   * Compara el orden de dos elementos en el DOM usando compareDocumentPosition
-   * Retorna: negativo si a está antes que b, positivo si b está antes que a, 0 si son iguales
-   */
+
   compareDOMOrder(a, b) {
-    if (a === b) return 0;
-    
-    // Usar compareDocumentPosition para determinar el orden relativo
-    const position = a.compareDocumentPosition(b);
-    
-    // Si a está antes que b en el documento
-    if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
-      return -1;
-    }
-    
-    // Si a está después que b en el documento
-    if (position & Node.DOCUMENT_POSITION_PRECEDING) {
-      return 1;
-    }
-    
-    // Fallback: comparar por posición visual (top, luego left)
-    const rectA = a.getBoundingClientRect();
-    const rectB = b.getBoundingClientRect();
-    
-    // Primero comparar por posición vertical (top)
-    const topDiff = rectA.top - rectB.top;
-    if (Math.abs(topDiff) > 5) { // Tolerancia de 5px para considerar "misma línea"
-      return topDiff;
-    }
-    
-    // Si están en la misma línea (aproximadamente), comparar por posición horizontal (left)
-    return rectA.left - rectB.left;
+    return compareDOMOrder(a, b);
   }
 
   updateFocusableElements() {
@@ -717,63 +643,8 @@ export class KeyboardNav {
     }
   }
 
-  // Extrae el nombre accesible de un elemento (similar a text-reader.js)
   getAccessibleName(element) {
-    if (!element) return '';
-
-    // 1) aria-label directa
-    const ariaLabel = element.getAttribute?.('aria-label');
-    if (ariaLabel && ariaLabel.trim()) return ariaLabel.trim();
-
-    // 2) aria-labelledby
-    const labelledBy = element.getAttribute?.('aria-labelledby');
-    if (labelledBy) {
-      const acc = labelledBy
-        .split(/\s+/)
-        .map(id => document.getElementById(id))
-        .filter(Boolean)
-        .map(n => n.textContent?.trim() || '')
-        .filter(Boolean)
-        .join(' ')
-        .trim();
-      if (acc) return acc;
-    }
-
-    // 3) imágenes: alt
-    if (element.tagName === 'IMG') {
-      const alt = element.getAttribute('alt');
-      if (alt && alt.trim()) return alt.trim();
-    }
-
-    // 4) enlaces/botones: texto visible o título
-    const titleAttr = element.getAttribute?.('title');
-    const visibleText = (element.innerText || element.textContent || '').trim();
-    if (titleAttr && titleAttr.trim()) return titleAttr.trim();
-    
-    // 5) inputs: usar associated label
-    if (element.tagName === 'INPUT' || element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
-      // label por for
-      const id = element.id;
-      if (id) {
-        const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
-        const labelText = label?.innerText?.trim() || label?.textContent?.trim();
-        if (labelText) return labelText;
-      }
-      // label ancestro
-      const labelAncestor = element.closest('label');
-      const labelAncestorText = labelAncestor?.innerText?.trim() || labelAncestor?.textContent?.trim();
-      if (labelAncestorText) return labelAncestorText;
-    }
-
-    // 6) fallback a texto visible del elemento (limitar longitud)
-    if (visibleText && visibleText.length <= 50) return visibleText;
-    if (visibleText && visibleText.length > 50) return visibleText.substring(0, 50) + '...';
-
-    // 7) fallback a alt de imagen descendiente
-    const imgChild = element.querySelector?.('img[alt]');
-    if (imgChild?.getAttribute('alt')) return imgChild.getAttribute('alt').trim();
-
-    return '';
+    return getAccessibleName(element);
   }
 
   getFocusInfo() {
