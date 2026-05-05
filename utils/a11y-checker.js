@@ -164,18 +164,50 @@ export class A11yChecker {
     elementsToCheck.forEach((element, index) => {
       try {
         const style = window.getComputedStyle(element);
-        const bgColor = this.getBackgroundColor(element);
         const textColor = style.color;
-        
+        const bgInfo = this.getBackgroundInfo(element);
+
+        if (bgInfo.type === 'image') {
+          this.addResult('warning', 'bgImageContrast',
+            'Texto sobre imagen de fondo: el contraste no se puede verificar automáticamente',
+            element);
+          return;
+        }
+
+        if (bgInfo.type === 'gradient') {
+          const fontSize = parseFloat(style.fontSize);
+          const fontWeight = parseInt(style.fontWeight) || 400;
+          const isLarge = fontSize >= 18 || (fontSize >= 14 && fontWeight >= 700);
+          const minContrast = isLarge ? 3.0 : 4.5;
+
+          let worstContrast = Infinity;
+          for (const stopColor of bgInfo.colors) {
+            const c = this.calculateContrast(textColor, stopColor);
+            if (c < worstContrast) worstContrast = c;
+          }
+
+          if (worstContrast < minContrast) {
+            this.addResult('error', 'gradientContrast',
+              `Contraste bajo sobre gradiente: ${worstContrast.toFixed(2)}:1 (mínimo: ${minContrast}:1)`,
+              element);
+          } else if (worstContrast < 4.5 && isLarge) {
+            this.addResult('warning', 'gradientContrast',
+              `Contraste bajo sobre gradiente (texto grande): ${worstContrast.toFixed(2)}:1 (recomendado: 4.5:1)`,
+              element);
+          }
+          return;
+        }
+
+        const bgColor = bgInfo.color;
         const contrast = this.calculateContrast(textColor, bgColor);
-        
+
         if (contrast < 4.5) {
           const fontSize = parseFloat(style.fontSize);
           const fontWeight = parseInt(style.fontWeight) || 400;
           const isLarge = fontSize >= 18 || (fontSize >= 14 && fontWeight >= 700);
-          
+
           const minContrast = isLarge ? 3.0 : 4.5;
-          
+
           if (contrast < minContrast) {
             this.addResult('error', 'lowContrast',
               `Contraste bajo: ${contrast.toFixed(2)}:1 (mínimo requerido: ${minContrast}:1)`,
@@ -650,6 +682,84 @@ export class A11yChecker {
     return textElements;
   }
 
+  getBackgroundInfo(element) {
+    let el = element;
+
+    while (el && el !== document.documentElement) {
+      const style = window.getComputedStyle(el);
+      const bgImage = style.backgroundImage;
+
+      if (bgImage && bgImage !== 'none') {
+        if (bgImage.includes('url(')) {
+          return { type: 'image' };
+        }
+
+        const gradientMatch = bgImage.match(/(linear|radial|conic)-gradient\((.+)\)/);
+        if (gradientMatch) {
+          const colors = this.parseGradientColors(gradientMatch[2]);
+          if (colors.length > 0) {
+            return { type: 'gradient', colors };
+          }
+        }
+      }
+
+      const bg = style.backgroundColor;
+      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+        return { type: 'solid', color: bg };
+      }
+
+      el = el.parentElement;
+    }
+
+    const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+    if (bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' && bodyBg !== 'transparent') {
+      return { type: 'solid', color: bodyBg };
+    }
+    return { type: 'solid', color: 'rgb(255, 255, 255)' };
+  }
+
+  parseGradientColors(gradientContent) {
+    const colors = [];
+    const parts = gradientContent.split(',');
+    let buffer = '';
+
+    for (const part of parts) {
+      buffer += (buffer ? ',' : '') + part;
+      const openParens = (buffer.match(/\(/g) || []).length;
+      const closeParens = (buffer.match(/\)/g) || []).length;
+
+      if (openParens === closeParens) {
+        const trimmed = buffer.trim();
+        const colorStr = this.extractColorFromStop(trimmed);
+        if (colorStr) colors.push(colorStr);
+        buffer = '';
+      }
+    }
+
+    return colors;
+  }
+
+  extractColorFromStop(stop) {
+    const rgbMatch = stop.match(/(rgba?\([^)]+\))/);
+    if (rgbMatch) return rgbMatch[1];
+
+    const hexMatch = stop.match(/(#[0-9a-fA-F]{3,8})/);
+    if (hexMatch) return hexMatch[1];
+
+    const namedColors = {
+      white: 'rgb(255,255,255)', black: 'rgb(0,0,0)', red: 'rgb(255,0,0)',
+      green: 'rgb(0,128,0)', blue: 'rgb(0,0,255)', yellow: 'rgb(255,255,0)',
+      orange: 'rgb(255,165,0)', purple: 'rgb(128,0,128)', gray: 'rgb(128,128,128)',
+      grey: 'rgb(128,128,128)', transparent: 'rgba(0,0,0,0)'
+    };
+    const words = stop.split(/\s+/);
+    for (const word of words) {
+      const lower = word.toLowerCase();
+      if (namedColors[lower]) return namedColors[lower];
+    }
+    return null;
+  }
+
   getBackgroundColor(element) {
     let el = element;
     let bgColor = null;
@@ -746,7 +856,9 @@ export class A11yChecker {
       duplicateTabIndex: 'Tabindex duplicado',
       tabIndexGap: 'Salto en tabindex',
       excessiveTabIndex: 'Uso excesivo de tabindex',
-      mixedTabOrder: 'Orden de tabulación mezclado'
+      mixedTabOrder: 'Orden de tabulación mezclado',
+      gradientContrast: 'Contraste sobre gradiente',
+      bgImageContrast: 'Texto sobre imagen de fondo'
     };
     
     return titles[code] || code;

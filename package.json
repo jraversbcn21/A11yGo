@@ -8,6 +8,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "node build.js",
+    "package": "node build.js --package",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

@@ -1,6 +1,7 @@
 # Chrome Extension
 *.crx
 *.pem
+*.zip
 .DS_Store
 
 # Node modules

@@ -27,16 +27,16 @@ utils/
   text-reader.js       - Lector TTS con detección de idioma y navegación de contenido
   keyboard-nav.js      - Navegación Tab/Shift+Tab con orden WCAG correcto
   visual-nav.js        - Overlays visuales de elementos focusables y orden de tabulación
-  a11y-checker.js      - Motor de validación (imágenes, contraste, forms, headings, ARIA, etc.)
+  a11y-checker.js      - Motor de validación (imágenes, contraste, gradientes, forms, headings, ARIA, etc.)
 tests/
   setup.js             - Mocks de Chrome API y CSS.escape para jsdom
   dom-utils.test.js    - Tests de calculateTabOrder, compareDOMOrder, getAccessibleName
   a11y-checker.test.js - Tests de parseColor, rgbToLuminance, calculateContrast
 icons/                 - Iconos en 16/48/128px (PNG + SVG)
-package.json           - Scripts: test, build, lint
+package.json           - Scripts: test, build, lint, package
 eslint.config.js       - ESLint flat config para Chrome extensions
 vitest.config.js       - Configuración Vitest con jsdom
-build.js               - Script esbuild: minifica JS → dist/
+build.js               - Script esbuild: minifica JS → dist/ (--package genera ZIP para Web Store)
 ```
 
 ## Arquitectura de Comunicación
@@ -65,6 +65,7 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 4. `npm run lint` — ejecutar ESLint
 5. `npm test` — ejecutar tests unitarios (25 tests)
 6. `npm run build` — generar dist/ minificado para producción
+7. `npm run package` — build + generar ZIP listo para Chrome Web Store
 
 ## Testing
 - Framework: Vitest con jsdom
