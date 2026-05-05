@@ -1,0 +1,15 @@
+{
+  "name": "a11ygo-ext",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chrome extension for web accessibility testing",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
+  }
+}

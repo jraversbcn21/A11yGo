@@ -1,7 +1,7 @@
 // Content script que se inyecta en todas las páginas
 // Prevenir múltiples inyecciones del script
 if (window.a11yGoContentScriptLoaded) {
-  logger.log('A11yGo: Content script ya está cargado, evitando re-inyección');
+  // Already loaded, skip re-injection
 } else {
   window.a11yGoContentScriptLoaded = true;
 
