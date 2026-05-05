@@ -72,6 +72,51 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - `a11yGoDebug` — Activa logging de debug (`true` | `false`)
 - `textReaderSpeed` — Velocidad del lector TTS (0.5–2.0)
 
+## Cobertura WCAG 2.1
+
+Referencia: https://www.w3.org/TR/WCAG21/ (78 criterios: 30 A, 20 AA, 28 AAA)
+
+A11yGo cubre **15 criterios** (9 A + 4 AA + 2 AAA ≈ 19%) combinando validación automática y testing manual asistido.
+
+### Principio 1: Perceptible
+
+| Criterio | Nivel | Herramienta |
+|---|---|---|
+| 1.1.1 Non-text Content | A | `checkImages()` detecta img sin alt/aria-label. TextReader lee nombres accesibles |
+| 1.3.1 Info and Relationships | A | `checkHeadings()`, `checkLandmarks()`, `checkARIA()`, `checkFormLabels()` validan estructura semántica |
+| 1.3.2 Meaningful Sequence | A | `checkTabOrder()` detecta tabindex duplicados, saltos y mezcla positivo/natural |
+| 1.4.3 Contrast (Minimum) | AA | `checkContrast()` calcula ratio 4.5:1 / 3:1 (texto grande), incluye gradientes y warning en imágenes de fondo |
+| 1.4.6 Contrast (Enhanced) | AAA | Reporta ratios exactos para evaluar cumplimiento de 7:1 |
+
+### Principio 2: Operable
+
+| Criterio | Nivel | Herramienta |
+|---|---|---|
+| 2.1.1 Keyboard | A | `checkKeyboardAccess()` detecta elementos con tabindex="-1". KeyboardNav permite verificación manual |
+| 2.4.1 Bypass Blocks | A | `checkLandmarks()` verifica presencia de main, nav, header, footer y roles ARIA |
+| 2.4.3 Focus Order | A | `checkTabOrder()` valida orden lógico. VisualNav muestra orden numérico superpuesto |
+| 2.4.4 Link Purpose (In Context) | A | `checkLinks()` detecta enlaces vacíos, texto genérico ("click here", "leer más") y texto corto |
+| 2.4.6 Headings and Labels | AA | `checkHeadings()` valida jerarquía h1→h6. `checkFormLabels()` verifica asociación label-input |
+| 2.4.7 Focus Visible | AA | KeyboardNav y VisualNav resaltan visualmente el elemento con foco |
+| 2.4.9 Link Purpose (Link Only) | AAA | Detección de texto genérico en enlaces |
+
+### Principio 3: Comprensible
+
+| Criterio | Nivel | Herramienta |
+|---|---|---|
+| 3.1.1 Language of Page | A | TextReader detecta idioma de la página para TTS |
+| 3.3.2 Labels or Instructions | A | `checkFormLabels()` detecta inputs sin label y anti-patrón placeholder-as-label |
+
+### Principio 4: Robusto
+
+| Criterio | Nivel | Herramienta |
+|---|---|---|
+| 4.1.2 Name, Role, Value | A | `checkARIA()` verifica nombres accesibles en roles interactivos y valores ARIA válidos |
+
+### Criterios no cubiertos
+
+Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2.x, contexto semántico 3.2.x) o análisis de comportamiento dinámico (pointer gestures 2.5.x, reflow 1.4.10). Esto es comparable a herramientas profesionales como axe-core o Lighthouse que cubren ~30-40% de WCAG automáticamente.
+
 ## Desarrollo
 1. Cargar como extensión sin empaquetar en `chrome://extensions/`
 2. Activar modo desarrollador
