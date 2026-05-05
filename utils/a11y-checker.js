@@ -1,4 +1,5 @@
 // Motor de validación de accesibilidad
+import { logger } from './logger.js';
 
 export class A11yChecker {
   constructor() {
@@ -10,20 +11,20 @@ export class A11yChecker {
     if (this.isActive) return;
     this.isActive = true;
     this.setupEscapeHandler();
-    console.log('A11yChecker: Activado');
+    logger.log('A11yChecker: Activado');
   }
 
   deactivate() {
     if (!this.isActive) return;
     this.isActive = false;
     this.removeEscapeHandler();
-    console.log('A11yChecker: Desactivado');
+    logger.log('A11yChecker: Desactivado');
   }
 
   setupEscapeHandler() {
     this.escapeHandler = (e) => {
       if (e.key === 'Escape') {
-        console.log('A11yChecker: ✓✓✓ Escape presionada - Desactivando validación ✓✓✓');
+        logger.log('A11yChecker: ✓✓✓ Escape presionada - Desactivando validación ✓✓✓');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -34,14 +35,14 @@ export class A11yChecker {
     };
     
     document.addEventListener('keydown', this.escapeHandler, true);
-    console.log('A11yChecker: Handler de Escape configurado');
+    logger.log('A11yChecker: Handler de Escape configurado');
   }
 
   removeEscapeHandler() {
     if (this.escapeHandler) {
       document.removeEventListener('keydown', this.escapeHandler, true);
       this.escapeHandler = null;
-      console.log('A11yChecker: Handler de Escape removido');
+      logger.log('A11yChecker: Handler de Escape removido');
     }
   }
 
@@ -60,45 +61,45 @@ export class A11yChecker {
   async check() {
     this.results = [];
     
-    console.log('A11yChecker: Iniciando validación...');
+    logger.log('A11yChecker: Iniciando validación...');
     
     try {
       // Ejecutar todas las validaciones de forma síncrona
       this.checkImages();
-      console.log('A11yChecker: ✓ Imágenes validadas');
+      logger.log('A11yChecker: ✓ Imágenes validadas');
       
       this.checkContrast();
-      console.log('A11yChecker: ✓ Contraste validado');
+      logger.log('A11yChecker: ✓ Contraste validado');
       
       this.checkFormLabels();
-      console.log('A11yChecker: ✓ Formularios validados');
+      logger.log('A11yChecker: ✓ Formularios validados');
       
       this.checkHeadings();
-      console.log('A11yChecker: ✓ Encabezados validados');
+      logger.log('A11yChecker: ✓ Encabezados validados');
       
       this.checkLandmarks();
-      console.log('A11yChecker: ✓ Landmarks validados');
+      logger.log('A11yChecker: ✓ Landmarks validados');
       
       this.checkLinks();
-      console.log('A11yChecker: ✓ Enlaces validados');
+      logger.log('A11yChecker: ✓ Enlaces validados');
       
       this.checkARIA();
-      console.log('A11yChecker: ✓ ARIA validado');
+      logger.log('A11yChecker: ✓ ARIA validado');
       
       this.checkKeyboardAccess();
-      console.log('A11yChecker: ✓ Accesibilidad de teclado validada');
+      logger.log('A11yChecker: ✓ Accesibilidad de teclado validada');
       
       this.checkTabOrder();
-      console.log('A11yChecker: ✓ Orden de tabulación validado');
+      logger.log('A11yChecker: ✓ Orden de tabulación validado');
 
-      console.log(`A11yChecker: Validación completada. Total de problemas: ${this.results.length}`);
-      console.log('A11yChecker: Desglose - Errores:', this.results.filter(r => r.severity === 'error').length, 
+      logger.log(`A11yChecker: Validación completada. Total de problemas: ${this.results.length}`);
+      logger.log('A11yChecker: Desglose - Errores:', this.results.filter(r => r.severity === 'error').length, 
                   'Advertencias:', this.results.filter(r => r.severity === 'warning').length,
                   'Info:', this.results.filter(r => r.severity === 'info').length);
       
       return this.results;
     } catch (error) {
-      console.error('A11yChecker: Error durante validación:', error);
+      logger.error('A11yChecker: Error durante validación:', error);
       return this.results; // Devolver lo que se haya recopilado hasta ahora
     }
   }
@@ -106,7 +107,7 @@ export class A11yChecker {
   checkImages() {
     try {
       const images = document.querySelectorAll('img');
-      console.log(`A11yChecker: Verificando ${images.length} imágenes`);
+      logger.log(`A11yChecker: Verificando ${images.length} imágenes`);
       
       images.forEach(img => {
         try {
@@ -124,21 +125,21 @@ export class A11yChecker {
         }
       });
     } catch (error) {
-      console.error('A11yChecker: Error en checkImages:', error);
+      logger.error('A11yChecker: Error en checkImages:', error);
     }
   }
 
   checkContrast() {
     const textElements = this.getTextElements();
     
-    console.log(`A11yChecker: Verificando contraste en ${textElements.length} elementos`);
+    logger.log(`A11yChecker: Verificando contraste en ${textElements.length} elementos`);
     
     // Limitar el número de elementos a verificar para evitar que se cuelgue
     const maxElements = 100;
     const elementsToCheck = textElements.slice(0, maxElements);
     
     if (textElements.length > maxElements) {
-      console.warn(`A11yChecker: Limitando verificación de contraste a ${maxElements} elementos de ${textElements.length}`);
+      logger.warn(`A11yChecker: Limitando verificación de contraste a ${maxElements} elementos de ${textElements.length}`);
     }
     
     elementsToCheck.forEach((element, index) => {
@@ -167,17 +168,17 @@ export class A11yChecker {
           }
         }
       } catch (error) {
-        console.warn(`A11yChecker: Error al verificar contraste del elemento ${index}:`, error);
+        logger.warn(`A11yChecker: Error al verificar contraste del elemento ${index}:`, error);
       }
     });
     
-    console.log(`A11yChecker: Contraste verificado en ${elementsToCheck.length} elementos`);
+    logger.log(`A11yChecker: Contraste verificado en ${elementsToCheck.length} elementos`);
   }
 
   checkFormLabels() {
     try {
       const inputs = document.querySelectorAll('input, select, textarea');
-      console.log(`A11yChecker: Verificando ${inputs.length} campos de formulario`);
+      logger.log(`A11yChecker: Verificando ${inputs.length} campos de formulario`);
       
       inputs.forEach(input => {
         try {
@@ -223,7 +224,7 @@ export class A11yChecker {
         }
       });
     } catch (error) {
-      console.error('A11yChecker: Error en checkFormLabels:', error);
+      logger.error('A11yChecker: Error en checkFormLabels:', error);
     }
   }
 
@@ -239,7 +240,7 @@ export class A11yChecker {
           }
         });
 
-      console.log(`A11yChecker: Verificando ${headings.length} encabezados`);
+      logger.log(`A11yChecker: Verificando ${headings.length} encabezados`);
 
       if (headings.length === 0) {
         this.addResult('warning', 'noHeadings', 'Página sin encabezados estructurados');
@@ -271,7 +272,7 @@ export class A11yChecker {
         }
       });
     } catch (error) {
-      console.error('A11yChecker: Error en checkHeadings:', error);
+      logger.error('A11yChecker: Error en checkHeadings:', error);
     }
   }
 
@@ -311,16 +312,16 @@ export class A11yChecker {
         this.addResult('error', 'multipleMains', 'Múltiples elementos main encontrados', mains[1]);
       }
       
-      console.log(`A11yChecker: Landmarks verificados (encontrados: ${foundLandmarks})`);
+      logger.log(`A11yChecker: Landmarks verificados (encontrados: ${foundLandmarks})`);
     } catch (error) {
-      console.error('A11yChecker: Error en checkLandmarks:', error);
+      logger.error('A11yChecker: Error en checkLandmarks:', error);
     }
   }
 
   checkLinks() {
     try {
       const links = document.querySelectorAll('a[href]');
-      console.log(`A11yChecker: Verificando ${links.length} enlaces`);
+      logger.log(`A11yChecker: Verificando ${links.length} enlaces`);
       
       links.forEach(link => {
         try {
@@ -341,17 +342,17 @@ export class A11yChecker {
         }
       });
     } catch (error) {
-      console.error('A11yChecker: Error en checkLinks:', error);
+      logger.error('A11yChecker: Error en checkLinks:', error);
     }
   }
 
   checkARIA() {
     try {
-      console.log('A11yChecker: Iniciando checkARIA...');
+      logger.log('A11yChecker: Iniciando checkARIA...');
       
       // Verificar elementos con role pero sin label
       const elementsWithRole = document.querySelectorAll('[role]');
-      console.log(`A11yChecker: Verificando ${elementsWithRole.length} elementos con role`);
+      logger.log(`A11yChecker: Verificando ${elementsWithRole.length} elementos con role`);
       
       let roleCount = 0;
       elementsWithRole.forEach(element => {
@@ -373,16 +374,16 @@ export class A11yChecker {
         }
       });
       
-      console.log(`A11yChecker: Procesados ${roleCount} elementos con role`);
+      logger.log(`A11yChecker: Procesados ${roleCount} elementos con role`);
 
       // Verificar ARIA inválidos - Limitar para evitar bloqueos
-      console.log('A11yChecker: Verificando atributos ARIA inválidos...');
+      logger.log('A11yChecker: Verificando atributos ARIA inválidos...');
       
       const elementsWithAria = document.querySelectorAll(
         '[aria-hidden], [aria-expanded], [aria-selected], [aria-checked], [aria-readonly], [aria-required], [aria-label], [aria-labelledby]'
       );
       
-      console.log(`A11yChecker: Verificando ${elementsWithAria.length} elementos con atributos ARIA`);
+      logger.log(`A11yChecker: Verificando ${elementsWithAria.length} elementos con atributos ARIA`);
       
       let ariaCount = 0;
       elementsWithAria.forEach(element => {
@@ -411,9 +412,9 @@ export class A11yChecker {
         }
       });
       
-      console.log(`A11yChecker: Procesados ${ariaCount} atributos ARIA`);
+      logger.log(`A11yChecker: Procesados ${ariaCount} atributos ARIA`);
     } catch (error) {
-      console.error('A11yChecker: Error en checkARIA:', error);
+      logger.error('A11yChecker: Error en checkARIA:', error);
     }
   }
 
@@ -441,13 +442,13 @@ export class A11yChecker {
         }
       });
     } catch (error) {
-      console.error('A11yChecker: Error en checkKeyboardAccess:', error);
+      logger.error('A11yChecker: Error en checkKeyboardAccess:', error);
     }
   }
 
   checkTabOrder() {
     try {
-      console.log('A11yChecker: Iniciando validación de orden de tabulación...');
+      logger.log('A11yChecker: Iniciando validación de orden de tabulación...');
       
       // Obtener todos los elementos focusables
       const selectors = [
@@ -560,9 +561,9 @@ export class A11yChecker {
         }
       }
       
-      console.log(`A11yChecker: Validación de orden de tabulación completada. Elementos focusables: ${focusableElements.length}, con tabindex positivo: ${positiveTabIndex.length}`);
+      logger.log(`A11yChecker: Validación de orden de tabulación completada. Elementos focusables: ${focusableElements.length}, con tabindex positivo: ${positiveTabIndex.length}`);
     } catch (error) {
-      console.error('A11yChecker: Error en checkTabOrder:', error);
+      logger.error('A11yChecker: Error en checkTabOrder:', error);
     }
   }
   
@@ -623,10 +624,10 @@ export class A11yChecker {
         processed.add(el);
       });
     } catch (error) {
-      console.error('A11yChecker: Error al obtener elementos de texto:', error);
+      logger.error('A11yChecker: Error al obtener elementos de texto:', error);
     }
 
-    console.log(`A11yChecker: Encontrados ${textElements.length} elementos de texto`);
+    logger.log(`A11yChecker: Encontrados ${textElements.length} elementos de texto`);
     return textElements;
   }
 

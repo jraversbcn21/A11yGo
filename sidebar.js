@@ -1,4 +1,5 @@
 import { i18n } from './utils/i18n.js';
+import { logger } from './utils/logger.js';
 
 let currentLanguage = 'es';
 let currentPanel = 'default';
@@ -121,7 +122,7 @@ function updateUI() {
 }
 
 function switchPanel(panelName) {
-  console.log(`Sidebar: switchPanel llamado, cambiando de '${currentPanel}' a '${panelName}'`);
+  logger.log(`Sidebar: switchPanel llamado, cambiando de '${currentPanel}' a '${panelName}'`);
   
   // Ocultar todos los paneles
   document.querySelectorAll('.panel').forEach(panel => {
@@ -133,11 +134,11 @@ function switchPanel(panelName) {
   if (panel) {
     panel.classList.remove('hidden');
     currentPanel = panelName;
-    console.log(`Sidebar: Panel '${panelName}' ahora visible`);
+    logger.log(`Sidebar: Panel '${panelName}' ahora visible`);
   } else {
     document.getElementById('defaultPanel').classList.remove('hidden');
     currentPanel = 'default';
-    console.log('Sidebar: Panel por defecto visible');
+    logger.log('Sidebar: Panel por defecto visible');
   }
 }
 
@@ -148,24 +149,24 @@ async function sendToContent(message) {
     tabId = tab?.id;
   }
   if (!tabId) {
-    console.warn('Sidebar: No se encontró tab activo');
+    logger.warn('Sidebar: No se encontró tab activo');
     return;
   }
   try {
     chrome.tabs.sendMessage(tabId, message, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('Sidebar: Error enviando mensaje:', chrome.runtime.lastError);
+        logger.error('Sidebar: Error enviando mensaje:', chrome.runtime.lastError);
       }
     });
   } catch (error) {
-    console.error('Sidebar: Error al enviar mensaje:', error);
+    logger.error('Sidebar: Error al enviar mensaje:', error);
   }
 }
 
 async function runA11yCheck() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) {
-    console.warn('A11yCheck: No hay pestaña activa');
+    logger.warn('A11yCheck: No hay pestaña activa');
     return;
   }
   activeTabId = tab.id;
@@ -181,41 +182,41 @@ async function runA11yCheck() {
   }
 
   try {
-    console.log('A11yCheck: Ejecutando validación en la pestaña:', tab.id);
+    logger.log('A11yCheck: Ejecutando validación en la pestaña:', tab.id);
     const results = await chrome.tabs.sendMessage(tab.id, {
       action: 'runA11yCheck'
     });
-    console.log('A11yCheck: Resultados recibidos:', results?.length || 0);
+    logger.log('A11yCheck: Resultados recibidos:', results?.length || 0);
     updateResults(results || []);
   } catch (error) {
-    console.error('Error running a11y check:', error);
+    logger.error('Error running a11y check:', error);
     // Si hay error, mostrar array vacío en lugar de fallar silenciosamente
     updateResults([]);
   }
 }
 
 function updateResults(results) {
-  console.log('Sidebar: updateResults llamado con:', results);
+  logger.log('Sidebar: updateResults llamado con:', results);
   
   if (!results) {
-    console.warn('Sidebar: results es null o undefined');
+    logger.warn('Sidebar: results es null o undefined');
     return;
   }
 
-  console.log(`Sidebar: Procesando ${results.length} resultados`);
+  logger.log(`Sidebar: Procesando ${results.length} resultados`);
 
   // Actualizar contadores
   const errors = results.filter(r => r.severity === 'error').length;
   const warnings = results.filter(r => r.severity === 'warning').length;
   const info = results.filter(r => r.severity === 'info').length;
 
-  console.log(`Sidebar: Errores: ${errors}, Advertencias: ${warnings}, Info: ${info}`);
+  logger.log(`Sidebar: Errores: ${errors}, Advertencias: ${warnings}, Info: ${info}`);
 
   const errorCountEl = document.getElementById('errorCount');
   const warningCountEl = document.getElementById('warningCount');
   const infoCountEl = document.getElementById('infoCount');
   
-  console.log('Sidebar: Elementos encontrados:', {
+  logger.log('Sidebar: Elementos encontrados:', {
     errorCount: !!errorCountEl,
     warningCount: !!warningCountEl,
     infoCount: !!infoCountEl
@@ -225,18 +226,18 @@ function updateResults(results) {
   if (warningCountEl) warningCountEl.textContent = warnings;
   if (infoCountEl) infoCountEl.textContent = info;
   
-  console.log('Sidebar: Contadores actualizados en UI');
+  logger.log('Sidebar: Contadores actualizados en UI');
 
   // Mostrar resultados
   const resultsList = document.getElementById('resultsList');
   
   if (!resultsList) {
-    console.error('Sidebar: No se encontró el elemento resultsList');
+    logger.error('Sidebar: No se encontró el elemento resultsList');
     return;
   }
   
   resultsList.innerHTML = '';
-  console.log('Sidebar: Limpiada lista de resultados');
+  logger.log('Sidebar: Limpiada lista de resultados');
 
   // Si no hay resultados, mostrar mensaje
   if (results.length === 0) {
@@ -268,11 +269,11 @@ function updateResults(results) {
       });
       resultsList.appendChild(item);
     } catch (e) {
-      console.error('Sidebar: Error al crear item de resultado:', e);
+      logger.error('Sidebar: Error al crear item de resultado:', e);
     }
   });
   
-  console.log(`Sidebar: ${results.length} resultados agregados a la lista`);
+  logger.log(`Sidebar: ${results.length} resultados agregados a la lista`);
 
   // Cambiar al panel de resultados si no está activo
   if (currentPanel !== 'a11yCheck') {
@@ -323,7 +324,7 @@ function addToNavigationHistory(name, type) {
   if (lastNavigatedElement && 
       lastNavigatedElement.name === normalizedName && 
       lastNavigatedElement.type === type) {
-    console.log('KeyboardNav History: Elemento duplicado, no se agrega al historial');
+    logger.log('KeyboardNav History: Elemento duplicado, no se agrega al historial');
     return;
   }
   
@@ -348,7 +349,7 @@ function addToNavigationHistory(name, type) {
     navigationHistory = navigationHistory.slice(0, MAX_HISTORY_ITEMS);
   }
   
-  console.log('KeyboardNav History: Agregado -', normalizedName, '→', type);
+  logger.log('KeyboardNav History: Agregado -', normalizedName, '→', type);
   
   // Actualizar la UI
   updateNavigationHistoryUI();
@@ -477,7 +478,7 @@ function addToTextReaderHistory(name, type) {
     textReaderHistory = textReaderHistory.slice(0, MAX_HISTORY_ITEMS);
   }
   
-  console.log('TextReader History: Agregado -', normalizedName, '→', type);
+  logger.log('TextReader History: Agregado -', normalizedName, '→', type);
   
   // Actualizar la UI
   updateTextReaderHistoryUI();

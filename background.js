@@ -1,7 +1,8 @@
 // Service worker para la extensión
+import { logger } from './utils/logger.js';
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('A11yGo extension installed');
+  logger.log('A11yGo extension installed');
 });
 
 // Manejar mensajes desde popup y sidebar

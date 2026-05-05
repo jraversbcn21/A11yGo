@@ -1,4 +1,5 @@
 // Lector de texto con Web Speech API
+import { logger } from './logger.js';
 
 export class TextReader {
   constructor() {
@@ -49,26 +50,26 @@ export class TextReader {
 
     // Verificar que speechSynthesis esté disponible
     if (!this.synthesis) {
-      console.error('SpeechSynthesis no está disponible en este navegador');
+      logger.error('SpeechSynthesis no está disponible en este navegador');
       return;
     }
 
     // Asegurar que las voces estén cargadas antes de activar
     let voices = this.synthesis.getVoices();
     if (voices.length === 0) {
-      console.log('TextReader: Esperando a que se carguen las voces...');
+      logger.log('TextReader: Esperando a que se carguen las voces...');
       // En Chrome, las voces se cargan de forma asíncrona
       await new Promise((resolve) => {
         const checkVoices = () => {
           voices = this.synthesis.getVoices();
           if (voices.length > 0) {
-            console.log(`TextReader: ${voices.length} voces cargadas`);
+            logger.log(`TextReader: ${voices.length} voces cargadas`);
             resolve();
           } else {
             // Si después de 2 segundos no hay voces, continuar de todos modos
             setTimeout(() => {
               if (this.synthesis.getVoices().length === 0) {
-                console.warn('TextReader: No se pudieron cargar voces, continuando de todos modos');
+                logger.warn('TextReader: No se pudieron cargar voces, continuando de todos modos');
               }
               resolve();
             }, 2000);
@@ -81,7 +82,7 @@ export class TextReader {
           this.synthesis.onvoiceschanged = () => {
             voices = this.synthesis.getVoices();
             if (voices.length > 0) {
-              console.log(`TextReader: Voces cargadas vía evento: ${voices.length}`);
+              logger.log(`TextReader: Voces cargadas vía evento: ${voices.length}`);
               resolve();
             }
           };
@@ -90,7 +91,7 @@ export class TextReader {
         checkVoices();
       });
     } else {
-      console.log(`TextReader: ${voices.length} voces disponibles`);
+      logger.log(`TextReader: ${voices.length} voces disponibles`);
     }
 
     // Si fue desactivado mientras se cargaban las voces, no continuar
@@ -108,7 +109,7 @@ export class TextReader {
     // Enfocar el primer elemento (ahora incluye contenido)
     this.focusFirstElement();
     
-    console.log('TextReader: Activado con navegación completa de contenido');
+    logger.log('TextReader: Activado con navegación completa de contenido');
   }
 
   focusFirstElement() {
@@ -191,12 +192,12 @@ export class TextReader {
     const firstElement = visibleElements[0];
 
     if (firstElement) {
-      console.log('TextReader: Enfocando el primer elemento al activar:', firstElement.tagName);
+      logger.log('TextReader: Enfocando el primer elemento al activar:', firstElement.tagName);
       try {
         firstElement.focus();
         // El evento focusin se encargará de leer el elemento automáticamente
       } catch (e) {
-        console.warn('TextReader: Error al enfocar el primer elemento:', e);
+        logger.warn('TextReader: Error al enfocar el primer elemento:', e);
       }
     }
   }
@@ -210,7 +211,7 @@ export class TextReader {
     this.removeEscapeHandler();
     // Restaurar elementos de contenido a su estado original
     this.restoreContentElements();
-    console.log('TextReader: Desactivado completamente');
+    logger.log('TextReader: Desactivado completamente');
   }
 
   makeContentElementsFocusable() {
@@ -261,7 +262,7 @@ export class TextReader {
         const elements = document.querySelectorAll(selector);
         elements.forEach(el => allContentElements.push(el));
       } catch (e) {
-        console.warn(`TextReader: Error al buscar selector ${selector}:`, e);
+        logger.warn(`TextReader: Error al buscar selector ${selector}:`, e);
       }
     });
 
@@ -360,7 +361,7 @@ export class TextReader {
       }
     });
 
-    console.log(`TextReader: ${this.modifiedElements.length} elementos de contenido hechos focusables`);
+    logger.log(`TextReader: ${this.modifiedElements.length} elementos de contenido hechos focusables`);
   }
 
   restoreContentElements() {
@@ -385,13 +386,13 @@ export class TextReader {
     });
 
     this.modifiedElements = [];
-    console.log('TextReader: Elementos de contenido restaurados');
+    logger.log('TextReader: Elementos de contenido restaurados');
   }
 
   setupEscapeHandler() {
     this.escapeHandler = (e) => {
       if (e.key === 'Escape') {
-        console.log('TextReader: ✓✓✓ Escape presionada - Desactivando lector de texto ✓✓✓');
+        logger.log('TextReader: ✓✓✓ Escape presionada - Desactivando lector de texto ✓✓✓');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -403,14 +404,14 @@ export class TextReader {
     
     // Usar capture: true para interceptar antes que otros handlers
     document.addEventListener('keydown', this.escapeHandler, true);
-    console.log('TextReader: Handler de Escape configurado');
+    logger.log('TextReader: Handler de Escape configurado');
   }
 
   removeEscapeHandler() {
     if (this.escapeHandler) {
       document.removeEventListener('keydown', this.escapeHandler, true);
       this.escapeHandler = null;
-      console.log('TextReader: Handler de Escape removido');
+      logger.log('TextReader: Handler de Escape removido');
     }
   }
 
@@ -642,30 +643,30 @@ export class TextReader {
   async read(text) {
     if (!this.isActive) return;
     if (!text || !text.trim()) {
-      console.warn('TextReader: No hay texto para leer');
+      logger.warn('TextReader: No hay texto para leer');
       return;
     }
 
     // Asegurar que speed tenga un valor válido
     if (typeof this.speed !== 'number' || isNaN(this.speed) || this.speed <= 0) {
-      console.warn('TextReader: Speed inválido, usando valor por defecto 1.0');
+      logger.warn('TextReader: Speed inválido, usando valor por defecto 1.0');
       this.speed = 1.0;
     }
 
     // Verificar que speechSynthesis esté disponible
     if (!this.synthesis) {
-      console.error('TextReader: SpeechSynthesis no está disponible');
+      logger.error('TextReader: SpeechSynthesis no está disponible');
       return;
     }
 
     // Validar que speechSynthesis esté activo y disponible
     try {
       if (typeof this.synthesis.speak !== 'function') {
-        console.error('TextReader: SpeechSynthesis no tiene método speak disponible');
+        logger.error('TextReader: SpeechSynthesis no tiene método speak disponible');
         return;
       }
     } catch (e) {
-      console.error('TextReader: Error al verificar SpeechSynthesis:', e);
+      logger.error('TextReader: Error al verificar SpeechSynthesis:', e);
       return;
     }
 
@@ -691,7 +692,7 @@ export class TextReader {
         this.utterance = null;
       }
     } catch (e) {
-      console.warn('TextReader: Error al cancelar lectura anterior:', e);
+      logger.warn('TextReader: Error al cancelar lectura anterior:', e);
     }
 
     try {
@@ -699,16 +700,16 @@ export class TextReader {
       const formattedText = this.formatTextForSpeech(text);
       
       if (!formattedText || !formattedText.trim()) {
-        console.warn('TextReader: Texto formateado está vacío');
+        logger.warn('TextReader: Texto formateado está vacío');
         return;
       }
       
       const lang = await this.detectLanguage(formattedText);
       const voice = await this.selectVoice(lang);
 
-      console.log('TextReader: Idioma detectado:', lang);
-      console.log('TextReader: Voz seleccionada:', voice?.name || 'ninguna');
-      console.log('TextReader: Texto formateado:', formattedText);
+      logger.log('TextReader: Idioma detectado:', lang);
+      logger.log('TextReader: Voz seleccionada:', voice?.name || 'ninguna');
+      logger.log('TextReader: Texto formateado:', formattedText);
 
       // Cancelar cualquier síntesis activa antes de crear nuevo utterance
       // Hacerlo de forma silenciosa sin advertencias innecesarias
@@ -734,12 +735,12 @@ export class TextReader {
         utterance = new SpeechSynthesisUtterance(formattedText);
         
         if (!utterance) {
-          console.error('TextReader: No se pudo crear SpeechSynthesisUtterance');
+          logger.error('TextReader: No se pudo crear SpeechSynthesisUtterance');
           return;
         }
       } catch (createError) {
-        console.error('TextReader: Error al crear SpeechSynthesisUtterance:', createError);
-        console.error('TextReader: Detalles del error de creación:', {
+        logger.error('TextReader: Error al crear SpeechSynthesisUtterance:', createError);
+        logger.error('TextReader: Detalles del error de creación:', {
           message: createError?.message,
           name: createError?.name,
           stack: createError?.stack
@@ -765,8 +766,8 @@ export class TextReader {
           utterance.voice = voice;
         }
       } catch (configError) {
-        console.error('TextReader: Error al configurar propiedades del utterance:', configError);
-        console.error('TextReader: Detalles:', {
+        logger.error('TextReader: Error al configurar propiedades del utterance:', configError);
+        logger.error('TextReader: Detalles:', {
           lang: lang,
           speed: this.speed,
           voice: voice?.name,
@@ -785,25 +786,25 @@ export class TextReader {
       try {
         this.utterance.onstart = () => {
           try {
-            console.log('TextReader: Iniciando lectura de texto');
+            logger.log('TextReader: Iniciando lectura de texto');
             if (self) {
               self.isReading = true;
               self.highlightText(text);
             }
           } catch (e) {
-            console.error('TextReader: Error en onstart:', e);
+            logger.error('TextReader: Error en onstart:', e);
           }
         };
 
         this.utterance.onend = () => {
           try {
-            console.log('TextReader: Lectura completada');
+            logger.log('TextReader: Lectura completada');
             if (self) {
               self.isReading = false;
               self.removeHighlight();
             }
           } catch (e) {
-            console.error('TextReader: Error en onend:', e);
+            logger.error('TextReader: Error en onend:', e);
           }
         };
 
@@ -833,7 +834,7 @@ export class TextReader {
               
               // Solo loguear errores importantes, ignorar errores menores como "interrupted"
               if (errorInfo !== 'interrupted' && errorInfo !== 'canceled') {
-                console.warn('TextReader: Error en síntesis de voz:', {
+                logger.warn('TextReader: Error en síntesis de voz:', {
                   error: errorInfo,
                   type: errorType,
                   message: errorMessage,
@@ -858,11 +859,11 @@ export class TextReader {
             }
           } catch (e) {
             // Fallback: si hay error en el handler de error, solo loguear sin detener
-            console.warn('TextReader: Error en handler onerror:', e);
+            logger.warn('TextReader: Error en handler onerror:', e);
           }
         };
       } catch (handlerError) {
-        console.error('TextReader: Error al configurar handlers del utterance:', handlerError);
+        logger.error('TextReader: Error al configurar handlers del utterance:', handlerError);
         return;
       }
 
@@ -870,7 +871,7 @@ export class TextReader {
       try {
         // Verificar que speechSynthesis esté disponible antes de hablar
         if (!this.synthesis || typeof this.synthesis.speak !== 'function') {
-          console.error('TextReader: SpeechSynthesis no disponible para speak');
+          logger.error('TextReader: SpeechSynthesis no disponible para speak');
           this.isReading = false;
           this.removeHighlight();
           return;
@@ -890,11 +891,11 @@ export class TextReader {
         // Asegurar que las voces estén cargadas (especialmente en Chrome)
         const voices = this.synthesis.getVoices();
         if (voices.length === 0) {
-          console.warn('TextReader: No hay voces disponibles, esperando...');
+          logger.warn('TextReader: No hay voces disponibles, esperando...');
           // Esperar un poco y reintentar
           setTimeout(() => {
             if (this.synthesis.getVoices().length > 0) {
-              console.log('TextReader: Voces cargadas, reintentando...');
+              logger.log('TextReader: Voces cargadas, reintentando...');
               try {
                 // Verificar de nuevo que no haya síntesis activa
                 if (this.synthesis.speaking || this.synthesis.pending) {
@@ -906,12 +907,12 @@ export class TextReader {
                   this.synthesis.speak(this.utterance);
                 }
               } catch (e) {
-                console.error('TextReader: Error al reintentar speak:', e);
+                logger.error('TextReader: Error al reintentar speak:', e);
                 this.isReading = false;
                 this.removeHighlight();
               }
             } else {
-              console.error('TextReader: No se pudieron cargar voces después de esperar');
+              logger.error('TextReader: No se pudieron cargar voces después de esperar');
               this.isReading = false;
               this.removeHighlight();
             }
@@ -931,10 +932,10 @@ export class TextReader {
         }
         
         this.synthesis.speak(this.utterance);
-        console.log('TextReader: Comando speak enviado');
+        logger.log('TextReader: Comando speak enviado');
       } catch (speakError) {
-        console.error('TextReader: Error al ejecutar speak:', speakError);
-        console.error('TextReader: Detalles del error:', {
+        logger.error('TextReader: Error al ejecutar speak:', speakError);
+        logger.error('TextReader: Detalles del error:', {
           message: speakError?.message,
           name: speakError?.name,
           stack: speakError?.stack
@@ -943,12 +944,12 @@ export class TextReader {
         this.removeHighlight();
       }
     } catch (error) {
-      console.error('TextReader: Error al leer texto:', error);
+      logger.error('TextReader: Error al leer texto:', error);
       this.isReading = false;
       try {
         this.removeHighlight();
       } catch (e) {
-        console.warn('TextReader: Error al remover highlight después de error:', e);
+        logger.warn('TextReader: Error al remover highlight después de error:', e);
       }
     }
   }
@@ -1043,7 +1044,7 @@ export class TextReader {
                     this.highlightElements.push(marker);
                   }
                 } catch (e2) {
-                  console.warn('TextReader: Error al crear marcador de highlight:', e2);
+                  logger.warn('TextReader: Error al crear marcador de highlight:', e2);
                 }
                 break;
               }
@@ -1051,11 +1052,11 @@ export class TextReader {
           }
         } catch (e) {
           // Continuar con el siguiente nodo si hay error
-          console.warn('TextReader: Error al procesar nodo de texto:', e);
+          logger.warn('TextReader: Error al procesar nodo de texto:', e);
         }
       }
     } catch (e) {
-      console.error('TextReader: Error en highlightText:', e);
+      logger.error('TextReader: Error en highlightText:', e);
     }
   }
 
@@ -1075,12 +1076,12 @@ export class TextReader {
             parent.normalize();
           }
         } catch (e) {
-          console.warn('TextReader: Error al remover highlight individual:', e);
+          logger.warn('TextReader: Error al remover highlight individual:', e);
         }
       });
       this.highlightElements = [];
     } catch (e) {
-      console.warn('TextReader: Error al remover highlights:', e);
+      logger.warn('TextReader: Error al remover highlights:', e);
       // Asegurar que el array esté limpio incluso si hay error
       this.highlightElements = [];
     }
@@ -1100,18 +1101,18 @@ export class TextReader {
     const selection = window.getSelection();
     if (selection && selection.toString().trim()) {
       textToRead = selection.toString().trim();
-      console.log('TextReader: Usando texto seleccionado');
+      logger.log('TextReader: Usando texto seleccionado');
     }
     // 2. Texto previamente seleccionado
     else if (this.selectedText) {
       textToRead = this.selectedText;
-      console.log('TextReader: Usando texto previamente seleccionado');
+      logger.log('TextReader: Usando texto previamente seleccionado');
     }
     // 3. Intentar obtener texto del último elemento sobre el que se hizo hover
     else if (this.lastHoveredElement) {
       textToRead = this.getTextFromElement(this.lastHoveredElement);
       if (textToRead) {
-        console.log('TextReader: Usando texto del último elemento con hover');
+        logger.log('TextReader: Usando texto del último elemento con hover');
       }
     }
     // 4. Intentar obtener texto del elemento donde está el cursor del mouse
@@ -1120,7 +1121,7 @@ export class TextReader {
       if (elementAtPoint) {
         textToRead = this.getTextFromElement(elementAtPoint);
         if (textToRead) {
-          console.log('TextReader: Usando texto del elemento en la posición del cursor');
+          logger.log('TextReader: Usando texto del elemento en la posición del cursor');
         }
       }
     }
@@ -1128,7 +1129,7 @@ export class TextReader {
     else {
       textToRead = this.getTextFromCursorPosition();
       if (textToRead) {
-        console.log('TextReader: Usando texto encontrado en la página');
+        logger.log('TextReader: Usando texto encontrado en la página');
       }
     }
     
@@ -1136,7 +1137,7 @@ export class TextReader {
     if (!textToRead && document.activeElement && document.activeElement !== document.body) {
       textToRead = this.getTextFromElement(document.activeElement);
       if (textToRead) {
-        console.log('TextReader: Usando texto del elemento con foco');
+        logger.log('TextReader: Usando texto del elemento con foco');
       }
     }
     
@@ -1152,7 +1153,7 @@ export class TextReader {
             textToRead = this.getTextFromElement(container);
           }
           if (textToRead) {
-            console.log('TextReader: Usando texto del contenedor de selección');
+            logger.log('TextReader: Usando texto del contenedor de selección');
           }
         }
       }
@@ -1162,7 +1163,7 @@ export class TextReader {
       this.selectedText = textToRead.trim();
       this.read(this.selectedText);
     } else {
-      console.warn('TextReader: No hay texto disponible para leer. Selecciona texto en la página o haz hover sobre un elemento con texto.');
+      logger.warn('TextReader: No hay texto disponible para leer. Selecciona texto en la página o haz hover sobre un elemento con texto.');
     }
   }
 
@@ -1609,7 +1610,7 @@ export class TextReader {
     
     // Si es un elemento que se puede omitir y es redundante, no leerlo
     if (skipTypes.includes(elementType) && isRecentDuplicate) {
-      console.log(`TextReader: Omitiendo lectura redundante - ${elementType}: ${name}`);
+      logger.log(`TextReader: Omitiendo lectura redundante - ${elementType}: ${name}`);
       return false;
     }
     
@@ -1743,7 +1744,7 @@ export class TextReader {
             await new Promise(resolve => setTimeout(resolve, 50));
           }
         } catch (e) {
-          console.warn('TextReader: Error al cancelar lectura anterior en readElementOnFocus:', e);
+          logger.warn('TextReader: Error al cancelar lectura anterior en readElementOnFocus:', e);
         }
       }
       
@@ -1762,7 +1763,7 @@ export class TextReader {
       await this.read(trimmed);
       return { read: true, name: normalizedName, type: elementType }; // Retornar información completa
     } catch (e) {
-      console.error('TextReader: Error en readElementOnFocus:', e);
+      logger.error('TextReader: Error en readElementOnFocus:', e);
       // Intentar retornar información del elemento aunque haya error
       try {
         const name = (this.getAccessibleName(element) || '').replace(/\s+/g, ' ').trim();
@@ -1848,13 +1849,13 @@ export class TextReader {
       if (this.synthesis.paused) {
         this.synthesis.resume();
       }
-      console.log('TextReader: Reanudando lectura');
+      logger.log('TextReader: Reanudando lectura');
     }
     // Si está leyendo, pausar
     else if (this.isReading) {
       this.isPaused = true;
       this.synthesis.pause();
-      console.log('TextReader: Pausando lectura');
+      logger.log('TextReader: Pausando lectura');
     }
   }
 
@@ -1863,7 +1864,7 @@ export class TextReader {
     
     if (this.synthesis.paused) {
       this.synthesis.resume();
-      console.log('TextReader: Reanudando lectura');
+      logger.log('TextReader: Reanudando lectura');
     }
   }
 
@@ -1874,7 +1875,7 @@ export class TextReader {
     this.isReading = false;
     this.isPaused = false;
     this.removeHighlight();
-    console.log('TextReader: Lectura detenida');
+    logger.log('TextReader: Lectura detenida');
   }
 
   setSpeed(speed) {

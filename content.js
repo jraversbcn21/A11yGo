@@ -1,7 +1,7 @@
 // Content script que se inyecta en todas las páginas
 // Prevenir múltiples inyecciones del script
 if (window.a11yGoContentScriptLoaded) {
-  console.log('A11yGo: Content script ya está cargado, evitando re-inyección');
+  logger.log('A11yGo: Content script ya está cargado, evitando re-inyección');
 } else {
   window.a11yGoContentScriptLoaded = true;
 
@@ -10,7 +10,8 @@ if (window.a11yGoContentScriptLoaded) {
   let keyboardNav = null;
   let visualNav = null;
   let a11yChecker = null;
-  
+  let logger = { log() {}, warn: console.warn.bind(console), error: console.error.bind(console) };
+
   // Promesa que se resuelve cuando los módulos están cargados
   let modulesReadyPromise = null;
   let modulesReady = false;
@@ -19,13 +20,15 @@ if (window.a11yGoContentScriptLoaded) {
   modulesReadyPromise = (async () => {
     // Verificar que el contexto de la extensión sea válido antes de cargar módulos
     if (!window.chrome || !chrome.runtime || !chrome.runtime.id) {
-      console.warn('A11yGo: Contexto de extensión no válido, no se pueden cargar módulos');
+      logger.warn('A11yGo: Contexto de extensión no válido, no se pueden cargar módulos');
       modulesReady = false;
       return;
     }
-    
+
     // Cargar módulos dinámicamente
     try {
+      const loggerModule = await import(chrome.runtime.getURL('utils/logger.js'));
+      logger = loggerModule.logger;
       const { TextReader } = await import(chrome.runtime.getURL('utils/text-reader.js'));
       const { KeyboardNav } = await import(chrome.runtime.getURL('utils/keyboard-nav.js'));
       const { VisualNav } = await import(chrome.runtime.getURL('utils/visual-nav.js'));
@@ -36,13 +39,13 @@ if (window.a11yGoContentScriptLoaded) {
       visualNav = new VisualNav();
       a11yChecker = new A11yChecker();
       modulesReady = true;
-      console.log('A11yGo: Módulos cargados correctamente');
-      console.log('A11yGo: keyboardNav instanciado:', !!keyboardNav);
-      console.log('A11yGo: keyboardNav type:', typeof keyboardNav);
+      logger.log('A11yGo: Módulos cargados correctamente');
+      logger.log('A11yGo: keyboardNav instanciado:', !!keyboardNav);
+      logger.log('A11yGo: keyboardNav type:', typeof keyboardNav);
       
       // Si había funciones pendientes de activación, activarlas ahora
       if (window.pendingActivations && window.pendingActivations.length > 0) {
-        console.log('A11yGo: Activando funciones pendientes:', window.pendingActivations);
+        logger.log('A11yGo: Activando funciones pendientes:', window.pendingActivations);
         const pending = [...window.pendingActivations];
         window.pendingActivations = [];
         // Ejecutar activaciones pendientes
@@ -54,10 +57,10 @@ if (window.a11yGoContentScriptLoaded) {
     } catch (error) {
       // Manejar específicamente el error de contexto inválido
       if (error.message && error.message.includes('Extension context invalidated')) {
-        console.warn('A11yGo: Contexto de extensión invalidado. La extensión puede haberse recargado.');
+        logger.warn('A11yGo: Contexto de extensión invalidado. La extensión puede haberse recargado.');
         // No loguear como error crítico, solo como advertencia
       } else {
-        console.error('A11yGo: Error loading modules:', error);
+        logger.error('A11yGo: Error loading modules:', error);
       }
       modulesReady = false;
     }
@@ -88,7 +91,7 @@ if (window.a11yGoContentScriptLoaded) {
       activateFunction(message.function).then(() => {
         sendResponse({ success: true });
       }).catch(error => {
-        console.error('A11yGo: Error activando función:', error);
+        logger.error('A11yGo: Error activando función:', error);
         sendResponse({ success: false, error: error.message });
       });
       return true; // Mantener canal abierto para respuesta asíncrona
@@ -104,7 +107,7 @@ if (window.a11yGoContentScriptLoaded) {
       runA11yCheck().then(results => {
         sendResponse(results || []);
       }).catch(error => {
-        console.error('Error in a11y check:', error);
+        logger.error('Error in a11y check:', error);
         sendResponse([]);
       });
       return true; // Mantener canal abierto para respuesta asíncrona
@@ -134,11 +137,11 @@ if (window.a11yGoContentScriptLoaded) {
   });
 
   async function activateFunction(functionName) {
-    console.log(`A11yGo: Activando función: ${functionName}`);
+    logger.log(`A11yGo: Activando función: ${functionName}`);
     
     // Esperar a que los módulos estén cargados
     if (!modulesReady && modulesReadyPromise) {
-      console.log(`A11yGo: Esperando a que los módulos se carguen para activar ${functionName}...`);
+      logger.log(`A11yGo: Esperando a que los módulos se carguen para activar ${functionName}...`);
       // Guardar la activación pendiente
       if (!window.pendingActivations) {
         window.pendingActivations = [];
@@ -150,15 +153,15 @@ if (window.a11yGoContentScriptLoaded) {
       
       try {
         await modulesReadyPromise;
-        console.log(`A11yGo: Módulos cargados, procediendo con activación de ${functionName}`);
+        logger.log(`A11yGo: Módulos cargados, procediendo con activación de ${functionName}`);
         
         // Verificar si ya fue activada mientras esperábamos
         if (activeFunctions.has(functionName)) {
-          console.log(`A11yGo: ${functionName} ya fue activada durante la carga de módulos`);
+          logger.log(`A11yGo: ${functionName} ya fue activada durante la carga de módulos`);
           return;
         }
       } catch (error) {
-        console.error('A11yGo: Error esperando módulos:', error);
+        logger.error('A11yGo: Error esperando módulos:', error);
         return;
       }
     }
@@ -167,31 +170,31 @@ if (window.a11yGoContentScriptLoaded) {
     if (!activeFunctions.has(functionName)) {
       activateFunctionDirectly(functionName);
     } else {
-      console.log(`A11yGo: ${functionName} ya está activa, evitando reactivación`);
+      logger.log(`A11yGo: ${functionName} ya está activa, evitando reactivación`);
     }
   }
 
   function activateFunctionDirectly(functionName) {
-    console.log(`A11yGo: Ejecutando activación directa de ${functionName}`);
+    logger.log(`A11yGo: Ejecutando activación directa de ${functionName}`);
     
     // Verificar que los módulos estén cargados antes de activar
     if (!modulesReady) {
       // Si los módulos no están listos, intentar esperar un poco más
       if (modulesReadyPromise) {
-        console.warn(`A11yGo: Los módulos aún no están listos, esperando...`);
+        logger.warn(`A11yGo: Los módulos aún no están listos, esperando...`);
         modulesReadyPromise.then(() => {
           if (modulesReady) {
-            console.log(`A11yGo: Módulos cargados, activando ${functionName}`);
+            logger.log(`A11yGo: Módulos cargados, activando ${functionName}`);
             activateFunctionDirectly(functionName);
           } else {
-            console.error(`A11yGo: Los módulos no se pudieron cargar. Verifica la consola para errores de sintaxis.`);
+            logger.error(`A11yGo: Los módulos no se pudieron cargar. Verifica la consola para errores de sintaxis.`);
           }
         }).catch(error => {
-          console.error(`A11yGo: Error al cargar módulos para ${functionName}:`, error);
+          logger.error(`A11yGo: Error al cargar módulos para ${functionName}:`, error);
         });
         return;
       } else {
-        console.error(`A11yGo: Los módulos no están listos y no hay promesa de carga. No se puede activar ${functionName}`);
+        logger.error(`A11yGo: Los módulos no están listos y no hay promesa de carga. No se puede activar ${functionName}`);
         return;
       }
     }
@@ -207,19 +210,19 @@ if (window.a11yGoContentScriptLoaded) {
           textReader.activate();
           notifySidebar('switchPanel', { panel: 'textReader' });
         } else {
-          console.error('A11yGo: textReader es null o undefined. Los módulos pueden no haberse cargado correctamente.');
+          logger.error('A11yGo: textReader es null o undefined. Los módulos pueden no haberse cargado correctamente.');
           activeFunctions.delete(functionName);
           return;
         }
         break;
       case 'keyboardNav':
-        console.log('A11yGo: Activando navegación por teclado');
-        console.log('A11yGo: keyboardNav existe?', !!keyboardNav);
+        logger.log('A11yGo: Activando navegación por teclado');
+        logger.log('A11yGo: keyboardNav existe?', !!keyboardNav);
         if (keyboardNav) {
           keyboardNav.activate();
           notifySidebar('switchPanel', { panel: 'keyboardNav' });
         } else {
-          console.error('A11yGo: keyboardNav es null o undefined. Los módulos pueden no haberse cargado correctamente.');
+          logger.error('A11yGo: keyboardNav es null o undefined. Los módulos pueden no haberse cargado correctamente.');
           activeFunctions.delete(functionName);
           return;
         }
@@ -229,7 +232,7 @@ if (window.a11yGoContentScriptLoaded) {
           visualNav.activate();
           notifySidebar('switchPanel', { panel: 'visualNav' });
         } else {
-          console.error('A11yGo: visualNav es null o undefined. Los módulos pueden no haberse cargado correctamente.');
+          logger.error('A11yGo: visualNav es null o undefined. Los módulos pueden no haberse cargado correctamente.');
           activeFunctions.delete(functionName);
           return;
         }
@@ -239,7 +242,7 @@ if (window.a11yGoContentScriptLoaded) {
         a11yChecker.activate();
         notifySidebar('switchPanel', { panel: 'a11yCheck' });
       } else {
-        console.error('A11yGo: a11yChecker es null o undefined. Los módulos pueden no haberse cargado correctamente.');
+        logger.error('A11yGo: a11yChecker es null o undefined. Los módulos pueden no haberse cargado correctamente.');
         activeFunctions.delete(functionName);
         return;
       }
@@ -247,7 +250,7 @@ if (window.a11yGoContentScriptLoaded) {
     }
 
     chrome.storage.local.set({ activePanel: functionName });
-    console.log(`A11yGo: Función ${functionName} activada correctamente`);
+    logger.log(`A11yGo: Función ${functionName} activada correctamente`);
   }
 
   function deactivateAll() {
@@ -287,22 +290,22 @@ if (window.a11yGoContentScriptLoaded) {
     try {
       // Solo ejecutar en el frame principal, no en iframes
       if (window !== window.top) {
-        console.log('A11yChecker: Ignorando ejecución en iframe');
+        logger.log('A11yChecker: Ignorando ejecución en iframe');
         return [];
       }
       
       if (!a11yChecker) {
-        console.warn('A11yChecker: a11yChecker no está disponible');
+        logger.warn('A11yChecker: a11yChecker no está disponible');
         return [];
       }
       
-      console.log('A11yChecker: Ejecutando validación en frame principal');
+      logger.log('A11yChecker: Ejecutando validación en frame principal');
       const results = await a11yChecker.check();
-      console.log(`A11yChecker: Enviando ${results.length} resultados al sidebar`);
+      logger.log(`A11yChecker: Enviando ${results.length} resultados al sidebar`);
       notifySidebar('updateResults', { results });
       return results || [];
     } catch (error) {
-      console.error('Error in runA11yCheck:', error);
+      logger.error('Error in runA11yCheck:', error);
       return [];
     }
   }
@@ -425,7 +428,7 @@ if (window.a11yGoContentScriptLoaded) {
 
       const element = document.querySelector(selector);
       if (!element || !(element instanceof Element)) {
-        console.warn('Highlight: Elemento no encontrado:', selector);
+        logger.warn('Highlight: Elemento no encontrado:', selector);
         return;
       }
 
@@ -480,11 +483,11 @@ if (window.a11yGoContentScriptLoaded) {
             if (restoreHidden) restoreHidden();
           }, 12000);
         } catch (e) {
-          console.warn('Highlight: Error al crear overlay:', e);
+          logger.warn('Highlight: Error al crear overlay:', e);
         }
       }, 600);
     } catch (error) {
-      console.error('Highlight: Error al resaltar elemento:', error);
+      logger.error('Highlight: Error al resaltar elemento:', error);
     }
   }
 
@@ -496,7 +499,7 @@ if (window.a11yGoContentScriptLoaded) {
       if (data.results) payload.results = data.results;
       if (data.data) payload.data = data.data;
     }
-    console.log('Content: Notificando al sidebar:', action, payload);
+    logger.log('Content: Notificando al sidebar:', action, payload);
     safeSendMessage(payload);
   }
 
@@ -518,7 +521,7 @@ if (window.a11yGoContentScriptLoaded) {
           // Agregar al historial si hay información válida del elemento
           // Agregar TODOS los elementos que tienen nombre y tipo, incluso si no se leen (por redundancia)
           if (result && result.name && result.name.trim() && result.type && result.type.trim()) {
-            console.log('TextReader: Agregando al historial:', result.name, '→', result.type, '(leído:', result.read, ')');
+            logger.log('TextReader: Agregando al historial:', result.name, '→', result.type, '(leído:', result.read, ')');
             notifySidebar('updateTextReaderFocus', { 
               data: {
                 accessibleName: result.name,
@@ -526,10 +529,10 @@ if (window.a11yGoContentScriptLoaded) {
               }
             });
           } else {
-            console.log('TextReader: No se agregó al historial - nombre o tipo vacío:', result);
+            logger.log('TextReader: No se agregó al historial - nombre o tipo vacío:', result);
           }
         }).catch(error => {
-          console.error('A11yGo: Error al leer elemento enfocado:', error);
+          logger.error('A11yGo: Error al leer elemento enfocado:', error);
           // Intentar obtener información del elemento como fallback
           try {
             // Verificar si es un elemento de contenido hecho focusable por el lector de texto
@@ -549,7 +552,7 @@ if (window.a11yGoContentScriptLoaded) {
               const accessibleName = textReader.getAccessibleName ? textReader.getAccessibleName(focused) : '';
               const elementType = textReader.getElementType ? textReader.getElementType(focused) : '';
               if (accessibleName && accessibleName.trim() && elementType && elementType.trim()) {
-                console.log('TextReader: Agregando al historial (fallback):', accessibleName, '→', elementType);
+                logger.log('TextReader: Agregando al historial (fallback):', accessibleName, '→', elementType);
                 notifySidebar('updateTextReaderFocus', { 
                   data: {
                     accessibleName: accessibleName,
@@ -559,7 +562,7 @@ if (window.a11yGoContentScriptLoaded) {
               }
             }
           } catch (e) {
-            console.error('A11yGo: Error al obtener información del elemento:', e);
+            logger.error('A11yGo: Error al obtener información del elemento:', e);
           }
         });
       }

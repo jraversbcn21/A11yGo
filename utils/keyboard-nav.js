@@ -1,5 +1,6 @@
 // Sistema de navegación por teclado
 import { calculateTabOrder, compareDOMOrder, getAccessibleName } from './dom-utils.js';
+import { logger } from './logger.js';
 
 export class KeyboardNav {
   constructor() {
@@ -13,18 +14,18 @@ export class KeyboardNav {
   }
 
   activate() {
-    console.log('KeyboardNav: activate() llamado');
-    console.log('KeyboardNav: this.isActive =', this.isActive);
+    logger.log('KeyboardNav: activate() llamado');
+    logger.log('KeyboardNav: this.isActive =', this.isActive);
     
     if (this.isActive) {
-      console.log('KeyboardNav: Ya está activo, evitando reactivación');
+      logger.log('KeyboardNav: Ya está activo, evitando reactivación');
       return;
     }
     
-    console.log('KeyboardNav: ✓✓✓ Activando navegación por teclado ✓✓✓');
+    logger.log('KeyboardNav: ✓✓✓ Activando navegación por teclado ✓✓✓');
     this.isActive = true;
     this.updateFocusableElements();
-    console.log(`KeyboardNav: Encontrados ${this.focusableElements.length} elementos focusables`);
+    logger.log(`KeyboardNav: Encontrados ${this.focusableElements.length} elementos focusables`);
     this.setupKeyboardHandlers();
     this.setupFocusHandlers();
     this.setupMutationObserver();
@@ -40,7 +41,7 @@ export class KeyboardNav {
     if (this.focusableElements.length > 0) {
       // Resetear el índice al inicio
       this.currentIndex = -1;
-      console.log('KeyboardNav: Enfocando el primer elemento al activar');
+      logger.log('KeyboardNav: Enfocando el primer elemento al activar');
       // Usar focusNext para enfocar el primer elemento
       this.focusNext();
     }
@@ -49,7 +50,7 @@ export class KeyboardNav {
   deactivate() {
     if (!this.isActive) return;
     
-    console.log('KeyboardNav: Desactivando navegación por teclado');
+    logger.log('KeyboardNav: Desactivando navegación por teclado');
     this.isActive = false;
     this.removeKeyboardHandlers();
     this.removeFocusHandlers();
@@ -100,23 +101,23 @@ export class KeyboardNav {
 
     // Ordenar según el orden real de tabulación
     this.focusableElements = this.calculateTabOrder(elements);
-    console.log(`KeyboardNav: Actualizados ${this.focusableElements.length} elementos focusables (de ${allElements.length} encontrados)`);
-    console.log(`KeyboardNav: Orden de tabulación calculado correctamente`);
+    logger.log(`KeyboardNav: Actualizados ${this.focusableElements.length} elementos focusables (de ${allElements.length} encontrados)`);
+    logger.log(`KeyboardNav: Orden de tabulación calculado correctamente`);
   }
 
   setupKeyboardHandlers() {
     this.handlers.keydown = (e) => {
       // Solo procesar si estamos activos
       if (!this.isActive) {
-        console.log('KeyboardNav: Handler ejecutado pero no está activo');
+        logger.log('KeyboardNav: Handler ejecutado pero no está activo');
         return;
       }
       
-      console.log(`KeyboardNav: Tecla detectada: ${e.key}, Shift: ${e.shiftKey}, Target:`, e.target);
+      logger.log(`KeyboardNav: Tecla detectada: ${e.key}, Shift: ${e.shiftKey}, Target:`, e.target);
       
       // Escape para salir del modo de navegación
       if (e.key === 'Escape') {
-        console.log('KeyboardNav: ✓✓✓ Escape presionada - Desactivando navegación por teclado ✓✓✓');
+        logger.log('KeyboardNav: ✓✓✓ Escape presionada - Desactivando navegación por teclado ✓✓✓');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -127,13 +128,13 @@ export class KeyboardNav {
       }
       
       if (e.key === 'Tab' && !e.shiftKey) {
-        console.log('KeyboardNav: ✓✓✓ Tab presionada (adelante) - INTERCEPTADO ✓✓✓');
+        logger.log('KeyboardNav: ✓✓✓ Tab presionada (adelante) - INTERCEPTADO ✓✓✓');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         this.focusNext();
       } else if (e.key === 'Tab' && e.shiftKey) {
-        console.log('KeyboardNav: ✓✓✓ Shift+Tab presionada (atrás) - INTERCEPTADO ✓✓✓');
+        logger.log('KeyboardNav: ✓✓✓ Shift+Tab presionada (atrás) - INTERCEPTADO ✓✓✓');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -143,7 +144,7 @@ export class KeyboardNav {
 
     // Usar capture: true para interceptar antes que otros handlers
     document.addEventListener('keydown', this.handlers.keydown, true);
-    console.log('KeyboardNav: ✓✓✓ Handlers de teclado configurados con capture ✓✓✓');
+    logger.log('KeyboardNav: ✓✓✓ Handlers de teclado configurados con capture ✓✓✓');
   }
 
   setupFocusHandlers() {
@@ -163,13 +164,13 @@ export class KeyboardNav {
       // Solo actualizar si el elemento está en nuestra lista y es diferente
       if (newIndex !== -1 && newIndex !== this.currentIndex) {
         const elementType = this.getElementType(activeElement);
-        console.log(`KeyboardNav: Focus cambiado externamente a ${elementType} (índice ${newIndex})`, activeElement);
+        logger.log(`KeyboardNav: Focus cambiado externamente a ${elementType} (índice ${newIndex})`, activeElement);
         this.currentIndex = newIndex;
         this.updateFocusInfo();
       } else if (newIndex === -1 && activeElement !== document.body) {
         // Si el elemento no está en la lista, puede ser que se haya actualizado
         const elementType = this.getElementType(activeElement);
-        console.log(`KeyboardNav: Focus en ${elementType} que no está en la lista, actualizando lista...`, activeElement);
+        logger.log(`KeyboardNav: Focus en ${elementType} que no está en la lista, actualizando lista...`, activeElement);
         this.updateFocusableElements();
         // Intentar encontrar el elemento después de actualizar
         const updatedIndex = this.focusableElements.indexOf(activeElement);
@@ -181,13 +182,13 @@ export class KeyboardNav {
     };
 
     document.addEventListener('focusin', this.handlers.focusin);
-    console.log('KeyboardNav: Handlers de foco configurados');
+    logger.log('KeyboardNav: Handlers de foco configurados');
   }
 
   removeKeyboardHandlers() {
     if (this.handlers.keydown) {
       document.removeEventListener('keydown', this.handlers.keydown, true);
-      console.log('KeyboardNav: Handlers de teclado removidos');
+      logger.log('KeyboardNav: Handlers de teclado removidos');
     }
   }
 
@@ -217,7 +218,7 @@ export class KeyboardNav {
         this.updateFocusableElements();
         
         if (this.focusableElements.length !== previousCount) {
-          console.log(`KeyboardNav: Cambios detectados en el DOM, elementos cambió de ${previousCount} a ${this.focusableElements.length}`);
+          logger.log(`KeyboardNav: Cambios detectados en el DOM, elementos cambió de ${previousCount} a ${this.focusableElements.length}`);
         }
         
         // Intentar mantener el índice si el elemento sigue existiendo
@@ -225,7 +226,7 @@ export class KeyboardNav {
           const newIndex = this.focusableElements.indexOf(previousElement);
           if (newIndex !== -1 && newIndex !== previousIndex) {
             this.currentIndex = newIndex;
-            console.log(`KeyboardNav: Índice actualizado de ${previousIndex} a ${newIndex} (mismo elemento)`);
+            logger.log(`KeyboardNav: Índice actualizado de ${previousIndex} a ${newIndex} (mismo elemento)`);
           }
         }
       }, 500);
@@ -237,34 +238,34 @@ export class KeyboardNav {
       attributes: true,
       attributeFilter: ['style', 'class', 'hidden', 'disabled', 'tabindex', 'aria-hidden']
     });
-    console.log('KeyboardNav: MutationObserver configurado con debounce');
+    logger.log('KeyboardNav: MutationObserver configurado con debounce');
   }
 
   removeMutationObserver() {
     if (this.mutationObserver) {
       this.mutationObserver.disconnect();
       this.mutationObserver = null;
-      console.log('KeyboardNav: MutationObserver removido');
+      logger.log('KeyboardNav: MutationObserver removido');
     }
   }
 
   focusNext() {
     if (this.focusableElements.length === 0) {
-      console.warn('KeyboardNav: No hay elementos focusables disponibles');
+      logger.warn('KeyboardNav: No hay elementos focusables disponibles');
       this.updateFocusableElements();
       return;
     }
     
-    console.log(`KeyboardNav: Navegando hacia adelante desde índice ${this.currentIndex}`);
+    logger.log(`KeyboardNav: Navegando hacia adelante desde índice ${this.currentIndex}`);
     
     // Asegurar que el índice sea válido
     if (this.currentIndex < 0) {
       this.currentIndex = 0;
-      console.log('KeyboardNav: Índice reseteado a 0');
+      logger.log('KeyboardNav: Índice reseteado a 0');
     } else if (this.currentIndex < this.focusableElements.length) {
       const currentElement = this.focusableElements[this.currentIndex];
       if (currentElement) {
-        console.log(`KeyboardNav: Elemento actual: ${this.getElementType(currentElement)} (índice ${this.currentIndex})`);
+        logger.log(`KeyboardNav: Elemento actual: ${this.getElementType(currentElement)} (índice ${this.currentIndex})`);
       }
     }
     
@@ -277,11 +278,11 @@ export class KeyboardNav {
       this.currentIndex = (this.currentIndex + 1) % this.focusableElements.length;
       const element = this.focusableElements[this.currentIndex];
       
-      console.log(`KeyboardNav: Intentando índice ${this.currentIndex} (intento ${attempts + 1}/${maxAttempts}) - Tipo: ${this.getElementType(element)}`);
+      logger.log(`KeyboardNav: Intentando índice ${this.currentIndex} (intento ${attempts + 1}/${maxAttempts}) - Tipo: ${this.getElementType(element)}`);
       
       // Verificar que el elemento existe y está en el DOM
       if (!element || !document.contains(element)) {
-        console.warn(`KeyboardNav: Elemento ${this.currentIndex} no válido (tipo: ${this.getElementType(element)}), saltando`);
+        logger.warn(`KeyboardNav: Elemento ${this.currentIndex} no válido (tipo: ${this.getElementType(element)}), saltando`);
         attempts++;
         continue;
       }
@@ -290,12 +291,12 @@ export class KeyboardNav {
       try {
         const style = window.getComputedStyle(element);
         if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-          console.log(`KeyboardNav: Elemento ${this.currentIndex} está oculto (tipo: ${this.getElementType(element)}), saltando`);
+          logger.log(`KeyboardNav: Elemento ${this.currentIndex} está oculto (tipo: ${this.getElementType(element)}), saltando`);
           attempts++;
           continue;
         }
       } catch (e) {
-        console.warn(`KeyboardNav: Error al verificar estilo de elemento ${this.currentIndex} (tipo: ${this.getElementType(element)}):`, e);
+        logger.warn(`KeyboardNav: Error al verificar estilo de elemento ${this.currentIndex} (tipo: ${this.getElementType(element)}):`, e);
         attempts++;
         continue;
       }
@@ -303,7 +304,7 @@ export class KeyboardNav {
       // Intentar enfocar el elemento
       try {
         const elementType = this.getElementType(element);
-        console.log(`KeyboardNav: Enfocando ${elementType} en índice ${this.currentIndex}`, element);
+        logger.log(`KeyboardNav: Enfocando ${elementType} en índice ${this.currentIndex}`, element);
         
         // Intentar múltiples métodos de enfoque
         let focused = false;
@@ -315,7 +316,7 @@ export class KeyboardNav {
           if (document.activeElement === element) {
             focused = true;
           } else {
-            console.warn(`KeyboardNav: focus() llamado pero activeElement es:`, document.activeElement);
+            logger.warn(`KeyboardNav: focus() llamado pero activeElement es:`, document.activeElement);
             // Verificar después de un frame por si el navegador necesita tiempo
             requestAnimationFrame(() => {
               if (document.activeElement === element) {
@@ -324,7 +325,7 @@ export class KeyboardNav {
             });
           }
         } catch (e) {
-          console.warn(`KeyboardNav: focus() falló:`, e);
+          logger.warn(`KeyboardNav: focus() falló:`, e);
         }
         
         // Método 2: Si no funcionó, intentar con tabindex temporal
@@ -342,16 +343,16 @@ export class KeyboardNav {
               } else {
                 element.removeAttribute('tabindex');
               }
-              console.warn(`KeyboardNav: enfoque con tabindex falló, activeElement es:`, document.activeElement);
+              logger.warn(`KeyboardNav: enfoque con tabindex falló, activeElement es:`, document.activeElement);
             }
           } catch (e) {
-            console.warn(`KeyboardNav: enfoque con tabindex falló:`, e);
+            logger.warn(`KeyboardNav: enfoque con tabindex falló:`, e);
           }
         }
         
         // Si el enfoque fue exitoso, salir
         if (focused && document.activeElement === element) {
-          console.log(`KeyboardNav: ✓✓✓ ${elementType} (índice ${this.currentIndex}) enfocado exitosamente ✓✓✓`);
+          logger.log(`KeyboardNav: ✓✓✓ ${elementType} (índice ${this.currentIndex}) enfocado exitosamente ✓✓✓`);
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           this.showTooltip(element);
           this.updateFocusInfo(); // Actualizar info después de enfocar
@@ -363,59 +364,59 @@ export class KeyboardNav {
                          activeElement === document.body ? 'foco devuelto al body' :
                          activeElement !== null ? `foco capturado por otro elemento (${this.getElementType(activeElement)})` :
                          'focus() no tuvo efecto';
-          console.warn(`KeyboardNav: ✗ ${elementType} (índice ${this.currentIndex}) no se pudo enfocar. Razón: ${reason}`);
+          logger.warn(`KeyboardNav: ✗ ${elementType} (índice ${this.currentIndex}) no se pudo enfocar. Razón: ${reason}`);
           
           // Verificar atributos que pueden impedir el enfoque
           const tabIndex = element.getAttribute('tabindex');
           const disabled = element.hasAttribute('disabled');
           const ariaHidden = element.getAttribute('aria-hidden');
           if (tabIndex === '-1') {
-            console.warn(`KeyboardNav: Elemento tiene tabindex="-1"`);
+            logger.warn(`KeyboardNav: Elemento tiene tabindex="-1"`);
           }
           if (disabled) {
-            console.warn(`KeyboardNav: Elemento está deshabilitado`);
+            logger.warn(`KeyboardNav: Elemento está deshabilitado`);
           }
           if (ariaHidden === 'true') {
-            console.warn(`KeyboardNav: Elemento tiene aria-hidden="true"`);
+            logger.warn(`KeyboardNav: Elemento tiene aria-hidden="true"`);
           }
         }
       } catch (e) {
         const elementType = this.getElementType(element);
-        console.error(`KeyboardNav: Error al enfocar ${elementType} (índice ${this.currentIndex}):`, e);
+        logger.error(`KeyboardNav: Error al enfocar ${elementType} (índice ${this.currentIndex}):`, e);
       }
       
       attempts++;
     }
     
     // Si llegamos aquí, no se pudo enfocar ningún elemento
-    console.error(`KeyboardNav: ✗ No se encontró ningún elemento válido después de ${maxAttempts} intentos`);
-    console.log(`KeyboardNav: Recargando lista de elementos focusables...`);
+    logger.error(`KeyboardNav: ✗ No se encontró ningún elemento válido después de ${maxAttempts} intentos`);
+    logger.log(`KeyboardNav: Recargando lista de elementos focusables...`);
     this.updateFocusableElements();
     
     // Si la lista cambió, intentar de nuevo con el siguiente índice
     if (this.focusableElements.length > 0 && this.currentIndex !== startIndex) {
-      console.log(`KeyboardNav: Reintentando con lista actualizada...`);
+      logger.log(`KeyboardNav: Reintentando con lista actualizada...`);
       this.focusNext();
     }
   }
 
   focusPrevious() {
     if (this.focusableElements.length === 0) {
-      console.warn('KeyboardNav: No hay elementos focusables disponibles');
+      logger.warn('KeyboardNav: No hay elementos focusables disponibles');
       this.updateFocusableElements();
       return;
     }
     
-    console.log(`KeyboardNav: Navegando hacia atrás desde índice ${this.currentIndex}`);
+    logger.log(`KeyboardNav: Navegando hacia atrás desde índice ${this.currentIndex}`);
     
     // Asegurar que el índice sea válido
     if (this.currentIndex < 0) {
       this.currentIndex = this.focusableElements.length - 1;
-      console.log(`KeyboardNav: Índice reseteado a ${this.currentIndex}`);
+      logger.log(`KeyboardNav: Índice reseteado a ${this.currentIndex}`);
     } else if (this.currentIndex < this.focusableElements.length) {
       const currentElement = this.focusableElements[this.currentIndex];
       if (currentElement) {
-        console.log(`KeyboardNav: Elemento actual: ${this.getElementType(currentElement)} (índice ${this.currentIndex})`);
+        logger.log(`KeyboardNav: Elemento actual: ${this.getElementType(currentElement)} (índice ${this.currentIndex})`);
       }
     }
     
@@ -430,11 +431,11 @@ export class KeyboardNav {
         : this.currentIndex - 1;
       const element = this.focusableElements[this.currentIndex];
       
-      console.log(`KeyboardNav: Intentando índice ${this.currentIndex} (intento ${attempts + 1}/${maxAttempts}) - Tipo: ${this.getElementType(element)}`);
+      logger.log(`KeyboardNav: Intentando índice ${this.currentIndex} (intento ${attempts + 1}/${maxAttempts}) - Tipo: ${this.getElementType(element)}`);
       
       // Verificar que el elemento existe y está en el DOM
       if (!element || !document.contains(element)) {
-        console.warn(`KeyboardNav: Elemento ${this.currentIndex} no válido (tipo: ${this.getElementType(element)}), saltando`);
+        logger.warn(`KeyboardNav: Elemento ${this.currentIndex} no válido (tipo: ${this.getElementType(element)}), saltando`);
         attempts++;
         continue;
       }
@@ -443,12 +444,12 @@ export class KeyboardNav {
       try {
         const style = window.getComputedStyle(element);
         if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-          console.log(`KeyboardNav: Elemento ${this.currentIndex} está oculto (tipo: ${this.getElementType(element)}), saltando`);
+          logger.log(`KeyboardNav: Elemento ${this.currentIndex} está oculto (tipo: ${this.getElementType(element)}), saltando`);
           attempts++;
           continue;
         }
       } catch (e) {
-        console.warn(`KeyboardNav: Error al verificar estilo de elemento ${this.currentIndex} (tipo: ${this.getElementType(element)}):`, e);
+        logger.warn(`KeyboardNav: Error al verificar estilo de elemento ${this.currentIndex} (tipo: ${this.getElementType(element)}):`, e);
         attempts++;
         continue;
       }
@@ -456,7 +457,7 @@ export class KeyboardNav {
       // Intentar enfocar el elemento
       try {
         const elementType = this.getElementType(element);
-        console.log(`KeyboardNav: Enfocando ${elementType} en índice ${this.currentIndex}`, element);
+        logger.log(`KeyboardNav: Enfocando ${elementType} en índice ${this.currentIndex}`, element);
         
         // Intentar múltiples métodos de enfoque
         let focused = false;
@@ -468,7 +469,7 @@ export class KeyboardNav {
           if (document.activeElement === element) {
             focused = true;
           } else {
-            console.warn(`KeyboardNav: focus() llamado pero activeElement es:`, document.activeElement);
+            logger.warn(`KeyboardNav: focus() llamado pero activeElement es:`, document.activeElement);
             // Verificar después de un frame por si el navegador necesita tiempo
             requestAnimationFrame(() => {
               if (document.activeElement === element) {
@@ -477,7 +478,7 @@ export class KeyboardNav {
             });
           }
         } catch (e) {
-          console.warn(`KeyboardNav: focus() falló:`, e);
+          logger.warn(`KeyboardNav: focus() falló:`, e);
         }
         
         // Método 2: Si no funcionó, intentar con tabindex temporal
@@ -495,16 +496,16 @@ export class KeyboardNav {
               } else {
                 element.removeAttribute('tabindex');
               }
-              console.warn(`KeyboardNav: enfoque con tabindex falló, activeElement es:`, document.activeElement);
+              logger.warn(`KeyboardNav: enfoque con tabindex falló, activeElement es:`, document.activeElement);
             }
           } catch (e) {
-            console.warn(`KeyboardNav: enfoque con tabindex falló:`, e);
+            logger.warn(`KeyboardNav: enfoque con tabindex falló:`, e);
           }
         }
         
         // Si el enfoque fue exitoso, salir
         if (focused && document.activeElement === element) {
-          console.log(`KeyboardNav: ✓✓✓ ${elementType} (índice ${this.currentIndex}) enfocado exitosamente ✓✓✓`);
+          logger.log(`KeyboardNav: ✓✓✓ ${elementType} (índice ${this.currentIndex}) enfocado exitosamente ✓✓✓`);
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           this.showTooltip(element);
           this.updateFocusInfo(); // Actualizar info después de enfocar
@@ -516,38 +517,38 @@ export class KeyboardNav {
                          activeElement === document.body ? 'foco devuelto al body' :
                          activeElement !== null ? `foco capturado por otro elemento (${this.getElementType(activeElement)})` :
                          'focus() no tuvo efecto';
-          console.warn(`KeyboardNav: ✗ ${elementType} (índice ${this.currentIndex}) no se pudo enfocar. Razón: ${reason}`);
+          logger.warn(`KeyboardNav: ✗ ${elementType} (índice ${this.currentIndex}) no se pudo enfocar. Razón: ${reason}`);
           
           // Verificar atributos que pueden impedir el enfoque
           const tabIndex = element.getAttribute('tabindex');
           const disabled = element.hasAttribute('disabled');
           const ariaHidden = element.getAttribute('aria-hidden');
           if (tabIndex === '-1') {
-            console.warn(`KeyboardNav: Elemento tiene tabindex="-1"`);
+            logger.warn(`KeyboardNav: Elemento tiene tabindex="-1"`);
           }
           if (disabled) {
-            console.warn(`KeyboardNav: Elemento está deshabilitado`);
+            logger.warn(`KeyboardNav: Elemento está deshabilitado`);
           }
           if (ariaHidden === 'true') {
-            console.warn(`KeyboardNav: Elemento tiene aria-hidden="true"`);
+            logger.warn(`KeyboardNav: Elemento tiene aria-hidden="true"`);
           }
         }
       } catch (e) {
         const elementType = this.getElementType(element);
-        console.error(`KeyboardNav: Error al enfocar ${elementType} (índice ${this.currentIndex}):`, e);
+        logger.error(`KeyboardNav: Error al enfocar ${elementType} (índice ${this.currentIndex}):`, e);
       }
       
       attempts++;
     }
     
     // Si llegamos aquí, no se pudo enfocar ningún elemento
-    console.error(`KeyboardNav: ✗ No se encontró ningún elemento válido después de ${maxAttempts} intentos`);
-    console.log(`KeyboardNav: Recargando lista de elementos focusables...`);
+    logger.error(`KeyboardNav: ✗ No se encontró ningún elemento válido después de ${maxAttempts} intentos`);
+    logger.log(`KeyboardNav: Recargando lista de elementos focusables...`);
     this.updateFocusableElements();
     
     // Si la lista cambió, intentar de nuevo con el índice anterior
     if (this.focusableElements.length > 0 && this.currentIndex !== startIndex) {
-      console.log(`KeyboardNav: Reintentando con lista actualizada...`);
+      logger.log(`KeyboardNav: Reintentando con lista actualizada...`);
       this.focusPrevious();
     }
   }

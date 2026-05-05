@@ -1,5 +1,6 @@
 // Modo de navegación visual
 import { calculateTabOrder, compareDOMOrder, getAccessibleName } from './dom-utils.js';
+import { logger } from './logger.js';
 
 export class VisualNav {
   constructor() {
@@ -32,7 +33,7 @@ export class VisualNav {
     this.setupFocusHandlers();
     this.setupEscapeHandler();
     this.setupUpdateHandlers();
-    console.log('VisualNav: Activado');
+    logger.log('VisualNav: Activado');
   }
 
   deactivate() {
@@ -47,13 +48,13 @@ export class VisualNav {
     this.navigationHistory = [];
     this.lastNavigatedElement = null;
     this.notifyHistoryUpdate(); // Notificar para limpiar el sidebar
-    console.log('VisualNav: Desactivado completamente');
+    logger.log('VisualNav: Desactivado completamente');
   }
 
   setupEscapeHandler() {
     this.escapeHandler = (e) => {
       if (e.key === 'Escape') {
-        console.log('VisualNav: ✓✓✓ Escape presionada - Desactivando navegación visual ✓✓✓');
+        logger.log('VisualNav: ✓✓✓ Escape presionada - Desactivando navegación visual ✓✓✓');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -65,14 +66,14 @@ export class VisualNav {
     
     // Usar capture: true para interceptar antes que otros handlers
     document.addEventListener('keydown', this.escapeHandler, true);
-    console.log('VisualNav: Handler de Escape configurado');
+    logger.log('VisualNav: Handler de Escape configurado');
   }
 
   removeEscapeHandler() {
     if (this.escapeHandler) {
       document.removeEventListener('keydown', this.escapeHandler, true);
       this.escapeHandler = null;
-      console.log('VisualNav: Handler de Escape removido');
+      logger.log('VisualNav: Handler de Escape removido');
     }
   }
 
@@ -210,8 +211,8 @@ export class VisualNav {
 
     // Ordenar según el orden real de tabulación
     this.focusableElements = this.calculateTabOrder(elements);
-    console.log(`VisualNav: Orden de tabulación calculado correctamente para ${this.focusableElements.length} elementos (de ${allElements.length} encontrados)`);
-    console.log(`VisualNav: Divs contenedores no interactivos excluidos`);
+    logger.log(`VisualNav: Orden de tabulación calculado correctamente para ${this.focusableElements.length} elementos (de ${allElements.length} encontrados)`);
+    logger.log(`VisualNav: Divs contenedores no interactivos excluidos`);
   }
 
   applySettings() {
@@ -654,7 +655,7 @@ export class VisualNav {
     // Notificar al sidebar
     this.notifyHistoryUpdate();
     
-    console.log(`VisualNav History: Agregado - Tab ${tabOrder}: ${normalizedName} → ${elementType}`);
+    logger.log(`VisualNav History: Agregado - Tab ${tabOrder}: ${normalizedName} → ${elementType}`);
   }
   
   /**

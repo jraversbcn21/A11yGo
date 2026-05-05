@@ -1,4 +1,5 @@
 import { i18n } from './utils/i18n.js';
+import { logger } from './utils/logger.js';
 
 let currentLanguage = 'es';
 
@@ -117,7 +118,7 @@ async function activateFunction(functionName) {
       window.close();
     }, 100);
   } catch (error) {
-    console.error('Error activating function:', error);
+    logger.error('Error activating function:', error);
     showStatus('error', i18n.t('activationError'));
   }
 }
@@ -126,7 +127,7 @@ async function openSidebar() {
   try {
     await chrome.sidePanel.open({ windowId: (await chrome.windows.getCurrent()).id });
   } catch (error) {
-    console.error('Error opening sidebar:', error);
+    logger.error('Error opening sidebar:', error);
     showStatus('error', i18n.t('sidebarError'));
   }
 }
