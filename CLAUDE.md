@@ -16,8 +16,8 @@ Extensión de Chrome (Manifest V3) orientada a QA testers para evaluar y mejorar
 ## Estructura del Proyecto
 ```
 manifest.json          - Configuración de la extensión (MV3)
-popup.html/js/css      - Menú principal (selector de función + idioma)
-sidebar.html/js/css    - Panel lateral con controles y resultados
+popup.html/js/css      - Menú principal (selector de función + idioma + indicador de función activa)
+sidebar.html/js/css    - Panel lateral con controles, resultados, config de categorías y exportación
 content.js             - Orquestador: carga módulos, gestiona activación/desactivación
 background.js          - Service worker (type: module): routing de mensajes, reinyección en SPAs
 utils/
@@ -57,6 +57,9 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - Funciones compartidas (DOM utilities) van en `utils/dom-utils.js`
 - Todo logging pasa por `utils/logger.js` — nunca usar console.log directamente
 - Debug se activa con: `chrome.storage.local.set({ a11yGoDebug: true })`
+- Popup muestra indicador visual (punto azul) en el botón de la función activa
+- Categorías de validación (9) configurables y persistentes en `chrome.storage.local`
+- Exportación de reportes en 3 formatos: JSON, CSV y HTML
 
 ## Desarrollo
 1. Cargar como extensión sin empaquetar en `chrome://extensions/`
