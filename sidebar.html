@@ -103,8 +103,27 @@
         <nav class="button-group" aria-label="Controles de validación">
           <button id="runCheckBtn" class="btn btn-primary" data-i18n="runCheck">Ejecutar Validación</button>
           <button id="clearResultsBtn" class="btn" data-i18n="clearResults">Limpiar Resultados</button>
-          <button id="exportReportBtn" class="btn" data-i18n="exportReport">Exportar Reporte</button>
+          <span class="export-group">
+            <button id="exportJSONBtn" class="btn" data-i18n="exportJSON">JSON</button>
+            <button id="exportCSVBtn" class="btn" data-i18n="exportCSV">CSV</button>
+            <button id="exportHTMLBtn" class="btn" data-i18n="exportHTML">HTML</button>
+          </span>
         </nav>
+        <details class="check-config">
+          <summary data-i18n="checkCategories">Categorías de validación</summary>
+          <fieldset class="check-categories" aria-label="Categorías de validación">
+            <legend class="visually-hidden">Seleccionar categorías</legend>
+            <label><input type="checkbox" data-category="images" checked> <span data-i18n="catImages">Imágenes</span></label>
+            <label><input type="checkbox" data-category="contrast" checked> <span data-i18n="catContrast">Contraste</span></label>
+            <label><input type="checkbox" data-category="forms" checked> <span data-i18n="catForms">Formularios</span></label>
+            <label><input type="checkbox" data-category="headings" checked> <span data-i18n="catHeadings">Encabezados</span></label>
+            <label><input type="checkbox" data-category="landmarks" checked> <span data-i18n="catLandmarks">Landmarks</span></label>
+            <label><input type="checkbox" data-category="links" checked> <span data-i18n="catLinks">Enlaces</span></label>
+            <label><input type="checkbox" data-category="aria" checked> <span data-i18n="catAria">ARIA</span></label>
+            <label><input type="checkbox" data-category="keyboard" checked> <span data-i18n="catKeyboard">Teclado</span></label>
+            <label><input type="checkbox" data-category="tabOrder" checked> <span data-i18n="catTabOrder">Orden de tabulación</span></label>
+          </fieldset>
+        </details>
         <section id="results" class="results" aria-labelledby="resultsHeading">
           <h3 id="resultsHeading" class="visually-hidden">Resultados de validación</h3>
           <dl class="results-summary">

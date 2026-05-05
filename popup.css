@@ -110,6 +110,19 @@ body {
   flex: 1;
 }
 
+.function-btn.is-active {
+  border-color: #4a90e2;
+  background: #eef4fb;
+}
+
+.btn-active-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4a90e2;
+  flex-shrink: 0;
+}
+
 .status {
   margin-top: 12px;
   padding: 8px 12px;

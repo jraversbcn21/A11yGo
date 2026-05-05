@@ -67,6 +67,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     sendToContent({ action: 'visualNav', setting: 'highlightFocus', value: e.target.checked });
   });
 
+  // Check category config: load persisted state and wire up change listeners
+  await loadCheckCategories();
+  document.querySelectorAll('.check-categories input[data-category]').forEach(cb => {
+    cb.addEventListener('change', saveCheckCategories);
+  });
+
   // A11y Check controls
   document.getElementById('runCheckBtn').addEventListener('click', async () => {
     await runA11yCheck();
@@ -76,9 +82,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearResults();
   });
 
-  document.getElementById('exportReportBtn').addEventListener('click', () => {
-    exportReport();
-  });
+  document.getElementById('exportJSONBtn').addEventListener('click', () => exportReport('json'));
+  document.getElementById('exportCSVBtn').addEventListener('click', () => exportReport('csv'));
+  document.getElementById('exportHTMLBtn').addEventListener('click', () => exportReport('html'));
 
   // Escuchar mensajes del content script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -184,7 +190,8 @@ async function runA11yCheck() {
   try {
     logger.log('A11yCheck: Ejecutando validación en la pestaña:', tab.id);
     const results = await chrome.tabs.sendMessage(tab.id, {
-      action: 'runA11yCheck'
+      action: 'runA11yCheck',
+      categories: getEnabledCategories()
     });
     logger.log('A11yCheck: Resultados recibidos:', results?.length || 0);
     updateResults(results || []);
@@ -514,32 +521,90 @@ function updateTextReaderHistoryUI() {
   });
 }
 
-async function exportReport() {
+async function loadCheckCategories() {
+  try {
+    const stored = await chrome.storage.local.get(['a11yCheckCategories']);
+    const cats = stored.a11yCheckCategories;
+    if (cats) {
+      document.querySelectorAll('.check-categories input[data-category]').forEach(cb => {
+        const cat = cb.getAttribute('data-category');
+        if (cat in cats) cb.checked = cats[cat];
+      });
+    }
+  } catch (_) {}
+}
+
+async function saveCheckCategories() {
+  const cats = {};
+  document.querySelectorAll('.check-categories input[data-category]').forEach(cb => {
+    cats[cb.getAttribute('data-category')] = cb.checked;
+  });
+  await chrome.storage.local.set({ a11yCheckCategories: cats });
+}
+
+function getEnabledCategories() {
+  const cats = {};
+  document.querySelectorAll('.check-categories input[data-category]').forEach(cb => {
+    cats[cb.getAttribute('data-category')] = cb.checked;
+  });
+  return cats;
+}
+
+async function exportReport(format = 'json') {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const results = Array.from(document.querySelectorAll('.result-item')).map(item => ({
     title: item.querySelector('.result-title').textContent,
-    severity: item.classList.contains('error') ? 'error' : 
+    severity: item.classList.contains('error') ? 'error' :
               item.classList.contains('warning') ? 'warning' : 'info',
     description: item.querySelector('.result-description').textContent,
     element: item.querySelector('.result-element')?.textContent || ''
   }));
 
-  const report = {
-    url: tab?.url || 'unknown',
-    timestamp: new Date().toISOString(),
-    summary: {
-      errors: document.getElementById('errorCount').textContent,
-      warnings: document.getElementById('warningCount').textContent,
-      info: document.getElementById('infoCount').textContent
-    },
-    results: results
+  const pageUrl = tab?.url || 'unknown';
+  const timestamp = new Date().toISOString();
+  const summary = {
+    errors: document.getElementById('errorCount').textContent,
+    warnings: document.getElementById('warningCount').textContent,
+    info: document.getElementById('infoCount').textContent
   };
 
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+  let blob, ext;
+
+  if (format === 'csv') {
+    const header = 'Severity,Title,Description,Element';
+    const rows = results.map(r =>
+      [r.severity, r.title, r.description, r.element]
+        .map(v => `"${v.replace(/"/g, '""')}"`)
+        .join(',')
+    );
+    blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+    ext = 'csv';
+  } else if (format === 'html') {
+    const severityColor = { error: '#c62828', warning: '#f57c00', info: '#1976d2' };
+    const tableRows = results.map(r =>
+      `<tr><td style="color:${severityColor[r.severity] || '#333'};font-weight:bold">${escapeHtml(r.severity)}</td><td>${escapeHtml(r.title)}</td><td>${escapeHtml(r.description)}</td><td><code>${escapeHtml(r.element)}</code></td></tr>`
+    ).join('');
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>A11yGo Report</title>
+<style>body{font-family:system-ui,sans-serif;max-width:900px;margin:2em auto;color:#333}
+table{width:100%;border-collapse:collapse;margin-top:1em}th,td{border:1px solid #ddd;padding:8px;text-align:left}
+th{background:#f5f5f5}code{font-size:12px;color:#666}</style></head>
+<body><h1>A11yGo - Reporte de Accesibilidad</h1>
+<p><strong>URL:</strong> ${escapeHtml(pageUrl)}<br><strong>Fecha:</strong> ${timestamp}</p>
+<p>Errores: ${summary.errors} | Advertencias: ${summary.warnings} | Info: ${summary.info}</p>
+<table><thead><tr><th>Severidad</th><th>Título</th><th>Descripción</th><th>Elemento</th></tr></thead>
+<tbody>${tableRows}</tbody></table></body></html>`;
+    blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    ext = 'html';
+  } else {
+    const report = { url: pageUrl, timestamp, summary, results };
+    blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    ext = 'json';
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `a11y-report-${Date.now()}.json`;
+  a.download = `a11y-report-${Date.now()}.${ext}`;
   a.click();
   URL.revokeObjectURL(url);
 }

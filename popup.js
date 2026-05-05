@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await i18n.init(currentLanguage);
   updateUI();
+  await updateActiveIndicator();
 
   // Event listeners
   document.getElementById('languageSelect').addEventListener('change', async (e) => {
@@ -55,6 +56,36 @@ function updateUI() {
       if (btnText) btnText.textContent = text;
     } else {
       el.textContent = text;
+    }
+  });
+}
+
+const functionButtons = {
+  textReader: 'textReaderBtn',
+  keyboardNav: 'keyboardNavBtn',
+  visualNav: 'visualNavBtn',
+  a11yCheck: 'a11yCheckBtn'
+};
+
+async function updateActiveIndicator() {
+  const stored = await chrome.storage.local.get(['activePanel']);
+  const activePanel = stored.activePanel;
+
+  Object.entries(functionButtons).forEach(([fn, btnId]) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    const indicator = btn.querySelector('.btn-active-indicator');
+    if (activePanel === fn) {
+      btn.classList.add('is-active');
+      if (!indicator) {
+        const dot = document.createElement('span');
+        dot.className = 'btn-active-indicator';
+        dot.setAttribute('aria-label', i18n.t('activeIndicator'));
+        btn.appendChild(dot);
+      }
+    } else {
+      btn.classList.remove('is-active');
+      if (indicator) indicator.remove();
     }
   });
 }

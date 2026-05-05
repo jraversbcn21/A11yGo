@@ -104,7 +104,7 @@ if (window.a11yGoContentScriptLoaded) {
       }
       sendResponse({ success: true });
     } else if (message.action === 'runA11yCheck') {
-      runA11yCheck().then(results => {
+      runA11yCheck(message.categories).then(results => {
         sendResponse(results || []);
       }).catch(error => {
         logger.error('Error in a11y check:', error);
@@ -286,7 +286,7 @@ if (window.a11yGoContentScriptLoaded) {
     visualNav.updateSetting(setting, value);
   }
 
-  async function runA11yCheck() {
+  async function runA11yCheck(categories) {
     try {
       // Solo ejecutar en el frame principal, no en iframes
       if (window !== window.top) {
@@ -300,7 +300,7 @@ if (window.a11yGoContentScriptLoaded) {
       }
       
       logger.log('A11yChecker: Ejecutando validación en frame principal');
-      const results = await a11yChecker.check();
+      const results = await a11yChecker.check(categories);
       logger.log(`A11yChecker: Enviando ${results.length} resultados al sidebar`);
       notifySidebar('updateResults', { results });
       return results || [];

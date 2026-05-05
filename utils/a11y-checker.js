@@ -58,39 +58,58 @@ export class A11yChecker {
     } catch (_) {}
   }
 
-  async check() {
+  async check(categories) {
     this.results = [];
-    
+
+    const enabled = (cat) => !categories || categories[cat] !== false;
+
     logger.log('A11yChecker: Iniciando validación...');
-    
+
     try {
-      // Ejecutar todas las validaciones de forma síncrona
-      this.checkImages();
-      logger.log('A11yChecker: ✓ Imágenes validadas');
-      
-      this.checkContrast();
-      logger.log('A11yChecker: ✓ Contraste validado');
-      
-      this.checkFormLabels();
-      logger.log('A11yChecker: ✓ Formularios validados');
-      
-      this.checkHeadings();
-      logger.log('A11yChecker: ✓ Encabezados validados');
-      
-      this.checkLandmarks();
-      logger.log('A11yChecker: ✓ Landmarks validados');
-      
-      this.checkLinks();
-      logger.log('A11yChecker: ✓ Enlaces validados');
-      
-      this.checkARIA();
-      logger.log('A11yChecker: ✓ ARIA validado');
-      
-      this.checkKeyboardAccess();
-      logger.log('A11yChecker: ✓ Accesibilidad de teclado validada');
-      
-      this.checkTabOrder();
-      logger.log('A11yChecker: ✓ Orden de tabulación validado');
+      if (enabled('images')) {
+        this.checkImages();
+        logger.log('A11yChecker: ✓ Imágenes validadas');
+      }
+
+      if (enabled('contrast')) {
+        this.checkContrast();
+        logger.log('A11yChecker: ✓ Contraste validado');
+      }
+
+      if (enabled('forms')) {
+        this.checkFormLabels();
+        logger.log('A11yChecker: ✓ Formularios validados');
+      }
+
+      if (enabled('headings')) {
+        this.checkHeadings();
+        logger.log('A11yChecker: ✓ Encabezados validados');
+      }
+
+      if (enabled('landmarks')) {
+        this.checkLandmarks();
+        logger.log('A11yChecker: ✓ Landmarks validados');
+      }
+
+      if (enabled('links')) {
+        this.checkLinks();
+        logger.log('A11yChecker: ✓ Enlaces validados');
+      }
+
+      if (enabled('aria')) {
+        this.checkARIA();
+        logger.log('A11yChecker: ✓ ARIA validado');
+      }
+
+      if (enabled('keyboard')) {
+        this.checkKeyboardAccess();
+        logger.log('A11yChecker: ✓ Accesibilidad de teclado validada');
+      }
+
+      if (enabled('tabOrder')) {
+        this.checkTabOrder();
+        logger.log('A11yChecker: ✓ Orden de tabulación validado');
+      }
 
       logger.log(`A11yChecker: Validación completada. Total de problemas: ${this.results.length}`);
       logger.log('A11yChecker: Desglose - Errores:', this.results.filter(r => r.severity === 'error').length, 

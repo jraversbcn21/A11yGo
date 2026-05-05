@@ -8,6 +8,7 @@ const translations = {
     noActiveTab: 'No hay pestaña activa',
     activationError: 'Error al activar función',
     sidebarError: 'Error al abrir panel lateral',
+    activeIndicator: 'Activo',
     
     // Funciones
     textReader: 'Lector de Texto',
@@ -48,6 +49,23 @@ const translations = {
     warnings: 'Advertencias:',
     info: 'Información:',
     
+    // Categorías de validación
+    checkCategories: 'Categorías de validación',
+    catImages: 'Imágenes',
+    catContrast: 'Contraste',
+    catForms: 'Formularios',
+    catHeadings: 'Encabezados',
+    catLandmarks: 'Landmarks',
+    catLinks: 'Enlaces',
+    catAria: 'ARIA',
+    catKeyboard: 'Teclado',
+    catTabOrder: 'Orden de tabulación',
+
+    // Exportación
+    exportJSON: 'JSON',
+    exportCSV: 'CSV',
+    exportHTML: 'HTML',
+
     // Reportes
     noAltText: 'Imagen sin texto alternativo',
     lowContrast: 'Contraste bajo',
@@ -67,6 +85,7 @@ const translations = {
     noActiveTab: 'No active tab',
     activationError: 'Error activating function',
     sidebarError: 'Error opening sidebar',
+    activeIndicator: 'Active',
     
     // Functions
     textReader: 'Text Reader',
@@ -107,6 +126,23 @@ const translations = {
     warnings: 'Warnings:',
     info: 'Information:',
     
+    // Check categories
+    checkCategories: 'Validation categories',
+    catImages: 'Images',
+    catContrast: 'Contrast',
+    catForms: 'Forms',
+    catHeadings: 'Headings',
+    catLandmarks: 'Landmarks',
+    catLinks: 'Links',
+    catAria: 'ARIA',
+    catKeyboard: 'Keyboard',
+    catTabOrder: 'Tab order',
+
+    // Export
+    exportJSON: 'JSON',
+    exportCSV: 'CSV',
+    exportHTML: 'HTML',
+
     // Reports
     noAltText: 'Image without alt text',
     lowContrast: 'Low contrast',
