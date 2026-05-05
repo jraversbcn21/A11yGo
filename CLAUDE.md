@@ -37,6 +37,7 @@ package.json           - Scripts: test, build, lint, package
 eslint.config.js       - ESLint flat config para Chrome extensions
 vitest.config.js       - Configuración Vitest con jsdom
 build.js               - Script esbuild: minifica JS → dist/ (--package genera ZIP para Web Store)
+.gitignore             - Excluye node_modules, dist, *.zip, *.crx, *.pem
 ```
 
 ## Arquitectura de Comunicación
@@ -44,6 +45,8 @@ build.js               - Script esbuild: minifica JS → dist/ (--package genera
 - **Content → Sidebar**: `chrome.runtime.sendMessage` para actualizar UI (historial, resultados)
 - **Background**: Relay de mensajes + reinyección de content.js en navegaciones SPA
 - **Desactivación**: Cada módulo escucha Escape y notifica al content script
+- **Highlight de errores**: Click en resultado del sidebar → scroll + overlay animado (pulse) sobre el elemento en la página, con badge de severidad (12s auto-remove)
+- **Historiales**: Sidebar mantiene historiales independientes por herramienta (textReader, keyboardNav, visualNav) con deduplicación y límite de 20 entradas
 
 ## Permisos
 activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all_urls>
@@ -60,6 +63,14 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - Popup muestra indicador visual (punto azul) en el botón de la función activa
 - Categorías de validación (9) configurables y persistentes en `chrome.storage.local`
 - Exportación de reportes en 3 formatos: JSON, CSV y HTML
+- Contraste sobre gradientes: valida contra cada color stop (worst-case); sobre imágenes de fondo emite warning
+
+## Storage Keys (`chrome.storage.local`)
+- `language` — Idioma de la interfaz (`es` | `en`)
+- `activePanel` — Función activa actual (`textReader` | `keyboardNav` | `visualNav` | `a11yCheck` | `default`)
+- `a11yCheckCategories` — Objeto con 9 categorías habilitadas/deshabilitadas
+- `a11yGoDebug` — Activa logging de debug (`true` | `false`)
+- `textReaderSpeed` — Velocidad del lector TTS (0.5–2.0)
 
 ## Desarrollo
 1. Cargar como extensión sin empaquetar en `chrome://extensions/`
