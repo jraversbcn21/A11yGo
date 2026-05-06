@@ -40,7 +40,8 @@ package.json           - Scripts: test, build, lint, package
 eslint.config.js       - ESLint flat config para Chrome extensions
 vitest.config.js       - Configuración Vitest con jsdom
 build.js               - Script esbuild: minifica JS → dist/ (--package genera ZIP para Web Store)
-.gitignore             - Excluye node_modules, dist, *.zip, *.crx, *.pem
+.gitignore             - Excluye node_modules, dist, *.zip, *.crx, *.pem, .claude/
+LICENSE                - Licencia MIT
 ```
 
 ## Arquitectura de Comunicación
