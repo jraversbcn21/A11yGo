@@ -1,5 +1,8 @@
 # A11yGo - Extensión de Accesibilidad Web para Chrome
 
+## Licencia
+MIT — ver [LICENSE](LICENSE)
+
 ## Descripción
 Extensión de Chrome (Manifest V3) orientada a QA testers para evaluar y mejorar la accesibilidad web. Proporciona 4 herramientas principales: lector de texto, navegación por teclado, navegación visual y validación automática WCAG.
 
