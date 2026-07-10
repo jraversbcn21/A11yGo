@@ -1,5 +1,8 @@
 # A11yGo - Extensión de Accesibilidad Web para Chrome
 
+## Licencia
+MIT — ver [LICENSE](LICENSE)
+
 ## Descripción
 Extensión de Chrome (Manifest V3) orientada a QA testers para evaluar y mejorar la accesibilidad web. Proporciona 4 herramientas principales: lector de texto, navegación por teclado, navegación visual y validación automática WCAG.
 
@@ -37,7 +40,8 @@ package.json           - Scripts: test, build, lint, package
 eslint.config.js       - ESLint flat config para Chrome extensions
 vitest.config.js       - Configuración Vitest con jsdom
 build.js               - Script esbuild: minifica JS → dist/ (--package genera ZIP para Web Store)
-.gitignore             - Excluye node_modules, dist, *.zip, *.crx, *.pem
+.gitignore             - Excluye node_modules, dist, *.zip, *.crx, *.pem, .claude/
+LICENSE                - Licencia MIT
 ```
 
 ## Arquitectura de Comunicación

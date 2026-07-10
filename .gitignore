@@ -13,6 +13,9 @@ dist/
 # Logs
 *.log
 
+# Claude Code
+.claude/
+
 # Editor
 .vscode/
 .idea/

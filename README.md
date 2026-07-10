@@ -1,6 +1,6 @@
 # A11yGo - Extensión de Accesibilidad Web
 
-Extensión de Chrome para mejorar la accesibilidad web y facilitar el testeo de accesibilidad para QA.
+Extensión de Chrome (Manifest V3) para mejorar la accesibilidad web y facilitar el testeo de accesibilidad para QA testers.
 
 ## Características
 
@@ -24,21 +24,23 @@ Extensión de Chrome para mejorar la accesibilidad web y facilitar el testeo de 
 - Controles para activar/desactivar características
 
 ### 🔍 Validación Automática de Accesibilidad
-- **ARIA**: Valida atributos ARIA correctos
-- **Contraste**: Verifica ratios de contraste WCAG AA/AAA
+- **ARIA**: Valida atributos ARIA correctos y nombres accesibles
+- **Contraste**: Verifica ratios de contraste WCAG AA/AAA, incluye gradientes e imágenes de fondo
 - **Imágenes**: Verifica presencia de atributos alt
 - **Headers**: Valida estructura jerárquica de encabezados
-- **Landmarks**: Detecta landmarks ARIA
-- **Formularios**: Valida labels asociados
-- **Enlaces**: Verifica texto descriptivo
+- **Landmarks**: Detecta landmarks ARIA (main, nav, header, footer)
+- **Formularios**: Valida labels asociados y anti-patrón placeholder-as-label
+- **Enlaces**: Verifica texto descriptivo y detecta texto genérico
 - **Keyboard**: Verifica si elementos son focusables
+- **Tab Order**: Detecta tabindex duplicados, saltos y orden incorrecto
 
 ### 📊 Reportes de Problemas
 - Panel de resultados con lista de problemas encontrados
 - Categorización por severidad (Error, Advertencia, Info)
 - Detalles técnicos de cada problema
-- Navegación directa a elementos problemáticos
-- Exportación de reporte en formato JSON
+- Navegación directa a elementos problemáticos con highlight animado
+- Exportación de reportes en JSON, CSV y HTML
+- Categorías de validación configurables
 
 ### 🌐 Multilingüe
 - Interfaz en español e inglés
@@ -72,28 +74,48 @@ Extensión de Chrome para mejorar la accesibilidad web y facilitar el testeo de 
 
 ```
 A11yGo-ext/
-├── manifest.json          # Configuración de la extensión
+├── manifest.json          # Configuración de la extensión (MV3)
 ├── popup.html/js/css      # Interfaz del popup
 ├── sidebar.html/js/css    # Panel lateral
-├── content.js             # Script de contenido
-├── background.js          # Service worker
+├── content.js             # Script de contenido (orquestador)
+├── background.js          # Service worker (module)
 ├── utils/                 # Módulos de utilidades
-│   ├── i18n.js           # Sistema de internacionalización
-│   ├── text-reader.js    # Lector de texto
-│   ├── keyboard-nav.js   # Navegación por teclado
-│   ├── visual-nav.js     # Navegación visual
-│   └── a11y-checker.js   # Motor de validación
-└── icons/                 # Iconos de la extensión
+│   ├── dom-utils.js       # Funciones compartidas (tab order, nombres accesibles)
+│   ├── logger.js          # Logger condicional
+│   ├── i18n.js            # Sistema de internacionalización
+│   ├── text-reader.js     # Lector de texto TTS
+│   ├── keyboard-nav.js    # Navegación por teclado
+│   ├── visual-nav.js      # Navegación visual
+│   └── a11y-checker.js    # Motor de validación WCAG
+├── tests/                 # Tests unitarios
+│   ├── setup.js           # Mocks de Chrome API
+│   ├── dom-utils.test.js  # Tests de utilidades DOM
+│   └── a11y-checker.test.js # Tests de validación
+├── icons/                 # Iconos (16/48/128px, PNG + SVG)
+├── build.js               # Script de build (esbuild)
+├── eslint.config.js       # ESLint flat config
+├── vitest.config.js       # Configuración Vitest
+└── LICENSE                # MIT License
 ```
 
 ## Desarrollo
 
 La extensión está construida con:
-- JavaScript vanilla (sin frameworks)
-- Web Speech API
+- JavaScript vanilla (ES modules, sin frameworks)
+- Web Speech API (text-to-speech)
 - Chrome Extension Manifest V3
 - CSS moderno
 
+### Comandos
+
+```bash
+npm install          # Instalar dependencias
+npm run lint         # Ejecutar ESLint
+npm test             # Ejecutar tests unitarios (25 tests)
+npm run build        # Generar dist/ minificado
+npm run package      # Build + ZIP para Chrome Web Store
+```
+
 ## Licencia
 
-MIT License
+MIT — ver [LICENSE](LICENSE)
