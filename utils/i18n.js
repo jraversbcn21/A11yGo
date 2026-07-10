@@ -9,6 +9,8 @@ const translations = {
     activationError: 'Error al activar función',
     sidebarError: 'Error al abrir panel lateral',
     activeIndicator: 'Activo',
+    notSupportedPage: 'Esta función no está disponible en páginas del navegador',
+    checkFailedError: 'Error al ejecutar la validación. Intenta recargar la página.',
     
     // Funciones
     textReader: 'Lector de Texto',
@@ -86,6 +88,8 @@ const translations = {
     activationError: 'Error activating function',
     sidebarError: 'Error opening sidebar',
     activeIndicator: 'Active',
+    notSupportedPage: 'This function is not available on browser pages',
+    checkFailedError: 'Validation error. Try reloading the page.',
     
     // Functions
     textReader: 'Text Reader',

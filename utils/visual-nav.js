@@ -78,7 +78,7 @@ export class VisualNav {
   }
 
   notifyDeactivation() {
-    // Notificar que la navegación visual se ha desactivado
+    if (this.onDeactivate) this.onDeactivate();
     if (!document || !document.body) return;
     if (!window.chrome || !chrome.runtime || !chrome.runtime.id) return;
     try {

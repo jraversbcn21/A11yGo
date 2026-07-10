@@ -39,6 +39,24 @@ if (window.a11yGoContentScriptLoaded) {
       visualNav = new VisualNav();
       a11yChecker = new A11yChecker();
       modulesReady = true;
+
+      textReader.onDeactivate = () => {
+        activeFunctions.delete('textReader');
+        chrome.storage.local.set({ activePanel: 'default' });
+      };
+      keyboardNav.onDeactivate = () => {
+        activeFunctions.delete('keyboardNav');
+        chrome.storage.local.set({ activePanel: 'default' });
+      };
+      visualNav.onDeactivate = () => {
+        activeFunctions.delete('visualNav');
+        chrome.storage.local.set({ activePanel: 'default' });
+      };
+      a11yChecker.onDeactivate = () => {
+        activeFunctions.delete('a11yCheck');
+        chrome.storage.local.set({ activePanel: 'default' });
+      };
+
       logger.log('A11yGo: Módulos cargados correctamente');
       logger.log('A11yGo: keyboardNav instanciado:', !!keyboardNav);
       logger.log('A11yGo: keyboardNav type:', typeof keyboardNav);
@@ -63,6 +81,7 @@ if (window.a11yGoContentScriptLoaded) {
         logger.error('A11yGo: Error loading modules:', error);
       }
       modulesReady = false;
+      throw error;
     }
   })();
 
@@ -88,8 +107,8 @@ if (window.a11yGoContentScriptLoaded) {
         sendResponse({ success: true });
         return true;
       }
-      activateFunction(message.function).then(() => {
-        sendResponse({ success: true });
+      activateFunction(message.function).then((success) => {
+        sendResponse({ success: !!success });
       }).catch(error => {
         logger.error('A11yGo: Error activando función:', error);
         sendResponse({ success: false, error: error.message });
@@ -115,23 +134,11 @@ if (window.a11yGoContentScriptLoaded) {
       handleVisualNavSetting(message.setting, message.value);
       sendResponse({ success: true });
     } else if (message.action === 'highlightElement') {
+      if (window !== window.top) {
+        sendResponse({ success: true });
+        return;
+      }
       highlightElement(message.selector, message.severity);
-      sendResponse({ success: true });
-    } else if (message.action === 'keyboardNavDeactivated') {
-      // La navegación por teclado se desactivó con Escape
-      activeFunctions.delete('keyboardNav');
-      sendResponse({ success: true });
-    } else if (message.action === 'textReaderDeactivated') {
-      // El lector de texto se desactivó con Escape
-      activeFunctions.delete('textReader');
-      sendResponse({ success: true });
-    } else if (message.action === 'visualNavDeactivated') {
-      // La navegación visual se desactivó con Escape
-      activeFunctions.delete('visualNav');
-      sendResponse({ success: true });
-    } else if (message.action === 'a11yCheckDeactivated') {
-      // La validación de accesibilidad se desactivó con Escape
-      activeFunctions.delete('a11yCheck');
       sendResponse({ success: true });
     }
   });
@@ -139,14 +146,11 @@ if (window.a11yGoContentScriptLoaded) {
   async function activateFunction(functionName) {
     logger.log(`A11yGo: Activando función: ${functionName}`);
     
-    // Esperar a que los módulos estén cargados
     if (!modulesReady && modulesReadyPromise) {
       logger.log(`A11yGo: Esperando a que los módulos se carguen para activar ${functionName}...`);
-      // Guardar la activación pendiente
       if (!window.pendingActivations) {
         window.pendingActivations = [];
       }
-      // Solo agregar si no está ya en la lista
       if (!window.pendingActivations.includes(functionName)) {
         window.pendingActivations.push(functionName);
       }
@@ -155,22 +159,21 @@ if (window.a11yGoContentScriptLoaded) {
         await modulesReadyPromise;
         logger.log(`A11yGo: Módulos cargados, procediendo con activación de ${functionName}`);
         
-        // Verificar si ya fue activada mientras esperábamos
         if (activeFunctions.has(functionName)) {
           logger.log(`A11yGo: ${functionName} ya fue activada durante la carga de módulos`);
-          return;
+          return true;
         }
       } catch (error) {
         logger.error('A11yGo: Error esperando módulos:', error);
-        return;
+        return false;
       }
     }
     
-    // Ejecutar la activación solo si no está ya activa
     if (!activeFunctions.has(functionName)) {
-      activateFunctionDirectly(functionName);
+      return activateFunctionDirectly(functionName);
     } else {
       logger.log(`A11yGo: ${functionName} ya está activa, evitando reactivación`);
+      return true;
     }
   }
 
@@ -179,7 +182,6 @@ if (window.a11yGoContentScriptLoaded) {
     
     // Verificar que los módulos estén cargados antes de activar
     if (!modulesReady) {
-      // Si los módulos no están listos, intentar esperar un poco más
       if (modulesReadyPromise) {
         logger.warn(`A11yGo: Los módulos aún no están listos, esperando...`);
         modulesReadyPromise.then(() => {
@@ -192,65 +194,35 @@ if (window.a11yGoContentScriptLoaded) {
         }).catch(error => {
           logger.error(`A11yGo: Error al cargar módulos para ${functionName}:`, error);
         });
-        return;
+        return false;
       } else {
         logger.error(`A11yGo: Los módulos no están listos y no hay promesa de carga. No se puede activar ${functionName}`);
-        return;
+        return false;
       }
     }
     
-    // Desactivar otras funciones si es necesario
-    deactivateAll();
-
-    activeFunctions.add(functionName);
-
-    switch (functionName) {
-      case 'textReader':
-        if (textReader) {
-          textReader.activate();
-          notifySidebar('switchPanel', { panel: 'textReader' });
-        } else {
-          logger.error('A11yGo: textReader es null o undefined. Los módulos pueden no haberse cargado correctamente.');
-          activeFunctions.delete(functionName);
-          return;
-        }
-        break;
-      case 'keyboardNav':
-        logger.log('A11yGo: Activando navegación por teclado');
-        logger.log('A11yGo: keyboardNav existe?', !!keyboardNav);
-        if (keyboardNav) {
-          keyboardNav.activate();
-          notifySidebar('switchPanel', { panel: 'keyboardNav' });
-        } else {
-          logger.error('A11yGo: keyboardNav es null o undefined. Los módulos pueden no haberse cargado correctamente.');
-          activeFunctions.delete(functionName);
-          return;
-        }
-        break;
-      case 'visualNav':
-        if (visualNav) {
-          visualNav.activate();
-          notifySidebar('switchPanel', { panel: 'visualNav' });
-        } else {
-          logger.error('A11yGo: visualNav es null o undefined. Los módulos pueden no haberse cargado correctamente.');
-          activeFunctions.delete(functionName);
-          return;
-        }
-        break;
-    case 'a11yCheck':
-      if (a11yChecker) {
-        a11yChecker.activate();
-        notifySidebar('switchPanel', { panel: 'a11yCheck' });
-      } else {
-        logger.error('A11yGo: a11yChecker es null o undefined. Los módulos pueden no haberse cargado correctamente.');
-        activeFunctions.delete(functionName);
-        return;
-      }
-      break;
+    const moduleMap = {
+      textReader: [textReader, 'textReader'],
+      keyboardNav: [keyboardNav, 'keyboardNav'],
+      visualNav: [visualNav, 'visualNav'],
+      a11yCheck: [a11yChecker, 'a11yCheck']
+    };
+    
+    const entry = moduleMap[functionName];
+    if (!entry || !entry[0]) {
+      logger.error(`A11yGo: ${functionName} es null o undefined. Los módulos pueden no haberse cargado correctamente.`);
+      return false;
     }
-
+    
+    const [module, panel] = entry;
+    
+    deactivateAll();
+    activeFunctions.add(functionName);
+    module.activate();
+    notifySidebar('switchPanel', { panel });
     chrome.storage.local.set({ activePanel: functionName });
     logger.log(`A11yGo: Función ${functionName} activada correctamente`);
+    return true;
   }
 
   function deactivateAll() {

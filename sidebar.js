@@ -3,7 +3,6 @@ import { logger } from './utils/logger.js';
 
 let currentLanguage = 'es';
 let currentPanel = 'default';
-let activeTabId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Cargar idioma guardado
@@ -87,7 +86,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('exportHTMLBtn').addEventListener('click', () => exportReport('html'));
 
   // Escuchar mensajes del content script
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
+    // Filtrar mensajes: solo procesar los de la pestaña activa
+    if (sender.tab) {
+      chrome.tabs.query({ active: true, currentWindow: true }, ([activeTab]) => {
+        if (!activeTab || sender.tab.id !== activeTab.id) return;
+        handleMessage(message, sender);
+      });
+    } else {
+      handleMessage(message, sender);
+    }
+  });
+
+  function handleMessage(message, _sender) {
     if (message.action === 'switchPanel') {
       switchPanel(message.panel);
     } else if (message.action === 'updateResults') {
@@ -114,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // La validación de accesibilidad se desactivó con Escape
       handleA11yCheckDeactivation();
     }
-  });
+  }
 
 });
 
@@ -149,17 +160,14 @@ function switchPanel(panelName) {
 }
 
 async function sendToContent(message) {
-  let tabId = activeTabId;
-  if (!tabId) {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    tabId = tab?.id;
-  }
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabId = tab?.id;
   if (!tabId) {
     logger.warn('Sidebar: No se encontró tab activo');
     return;
   }
   try {
-    chrome.tabs.sendMessage(tabId, message, (response) => {
+    chrome.tabs.sendMessage(tabId, message, { frameId: 0 }, (response) => {
       if (chrome.runtime.lastError) {
         logger.error('Sidebar: Error enviando mensaje:', chrome.runtime.lastError);
       }
@@ -175,7 +183,6 @@ async function runA11yCheck() {
     logger.warn('A11yCheck: No hay pestaña activa');
     return;
   }
-  activeTabId = tab.id;
 
   // Mostrar mensaje de carga
   const resultsList = document.getElementById('resultsList');
@@ -192,14 +199,26 @@ async function runA11yCheck() {
     const results = await chrome.tabs.sendMessage(tab.id, {
       action: 'runA11yCheck',
       categories: getEnabledCategories()
-    });
+    }, { frameId: 0 });
     logger.log('A11yCheck: Resultados recibidos:', results?.length || 0);
     updateResults(results || []);
   } catch (error) {
     logger.error('Error running a11y check:', error);
-    // Si hay error, mostrar array vacío en lugar de fallar silenciosamente
-    updateResults([]);
+    showCheckError();
   }
+}
+
+function showCheckError() {
+  const resultsList = document.getElementById('resultsList');
+  if (!resultsList) return;
+  resultsList.innerHTML = '';
+  const errorItem = document.createElement('li');
+  errorItem.className = 'history-empty error-state';
+  errorItem.textContent = i18n.t('checkFailedError');
+  resultsList.appendChild(errorItem);
+  document.getElementById('errorCount').textContent = '-';
+  document.getElementById('warningCount').textContent = '-';
+  document.getElementById('infoCount').textContent = '-';
 }
 
 function updateResults(results) {

@@ -1,5 +1,6 @@
 // Motor de validación de accesibilidad
 import { logger } from './logger.js';
+import { compareDOMOrder } from './dom-utils.js';
 
 export class A11yChecker {
   constructor() {
@@ -47,6 +48,7 @@ export class A11yChecker {
   }
 
   notifyDeactivation() {
+    if (this.onDeactivate) this.onDeactivate();
     if (!document || !document.body) return;
     if (!window.chrome || !chrome.runtime || !chrome.runtime.id) return;
     try {
@@ -136,7 +138,7 @@ export class A11yChecker {
           
           if (alt === null && !ariaLabel && role !== 'presentation' && role !== 'none') {
             this.addResult('error', 'noAltText', 'Imagen sin texto alternativo', img);
-          } else if (alt === '' && img.getAttribute('src')) {
+          } else if (alt === '' && img.getAttribute('src') && role !== 'presentation' && role !== 'none') {
             this.addResult('warning', 'emptyAltText', 'Imagen con alt vacío (debe tener descripción o role="presentation")', img);
           }
         } catch (e) {
@@ -183,8 +185,11 @@ export class A11yChecker {
           let worstContrast = Infinity;
           for (const stopColor of bgInfo.colors) {
             const c = this.calculateContrast(textColor, stopColor);
+            if (c === null) continue;
             if (c < worstContrast) worstContrast = c;
           }
+
+          if (worstContrast === Infinity) return;
 
           if (worstContrast < minContrast) {
             this.addResult('error', 'gradientContrast',
@@ -200,6 +205,8 @@ export class A11yChecker {
 
         const bgColor = bgInfo.color;
         const contrast = this.calculateContrast(textColor, bgColor);
+
+        if (contrast === null) return;
 
         if (contrast < 4.5) {
           const fontSize = parseFloat(style.fontSize);
@@ -233,7 +240,7 @@ export class A11yChecker {
       
       inputs.forEach(input => {
         try {
-          if (input.type === 'hidden' || input.type === 'submit' || input.type === 'button') {
+          if (input.type === 'hidden' || input.type === 'submit' || input.type === 'button' || input.type === 'image' || input.type === 'reset') {
             return;
           }
 
@@ -385,7 +392,7 @@ export class A11yChecker {
             this.addResult('error', 'emptyLink', 'Enlace sin texto descriptivo', link);
           } else if (text.length > 0 && text.length < 3 && !ariaLabel && !img) {
             this.addResult('warning', 'shortLinkText', 'Texto de enlace muy corto, puede ser difícil de entender', link);
-          } else if (text.match(/^(click|here|read more|more|link|aquí|leer más|más)$/i)) {
+          } else if (text.match(/^(click|click here|here|read more|more|link|aquí|leer más|más|haz clic|haz clic aquí|clic aquí|haga clic aquí|learn more|info|details|ver más|seguir leyendo)$/i)) {
             this.addResult('warning', 'genericLinkText', 'Texto de enlace genérico, proporciona contexto', link);
           }
         } catch (e) {
@@ -446,9 +453,13 @@ export class A11yChecker {
             try {
               const value = attr.value;
               
-              // Verificar valores booleanos
+              // Verificar valores booleanos (con excepciones válidas según spec ARIA)
               if (attr.name.match(/^(aria-hidden|aria-expanded|aria-selected|aria-checked|aria-readonly|aria-required)$/)) {
-                if (value !== 'true' && value !== 'false') {
+                if (attr.name === 'aria-checked' && value === 'mixed') {
+                  // mixed es válido para aria-checked (checkbox tri-estado)
+                } else if ((attr.name === 'aria-expanded' || attr.name === 'aria-selected') && value === 'undefined') {
+                  // undefined es válido para aria-expanded/aria-selected
+                } else if (value !== 'true' && value !== 'false') {
                   this.addResult('error', 'invalidAria', 
                     `Atributo ${attr.name} debe ser "true" o "false"`, element);
                 }
@@ -591,17 +602,14 @@ export class A11yChecker {
         
         if (elementsWithPositiveTabIndex.length > 0) {
           const firstPositiveElement = elementsWithPositiveTabIndex[0];
-          const domPosition = this.getDOMPosition(firstPositiveElement);
           
-          // Verificar si hay elementos naturales antes de este
           const naturalElementsBefore = focusableElements.filter(el => {
             const tabIndexAttr = el.getAttribute('tabindex');
             const parsed = tabIndexAttr === null ? null : parseInt(tabIndexAttr, 10);
-            const isNatural = tabIndexAttr === null || parsed === 0 || parsed === null;
+            const isNatural = tabIndexAttr === null || parsed === 0 || parsed === null || isNaN(parsed);
             if (!isNatural) return false;
             
-            const elDomPosition = this.getDOMPosition(el);
-            return elDomPosition < domPosition;
+            return compareDOMOrder(el, firstPositiveElement) < 0;
           });
           
           if (naturalElementsBefore.length > 0) {
@@ -618,33 +626,6 @@ export class A11yChecker {
     }
   }
   
-  /**
-   * Calcula la posición de un elemento en el DOM para orden natural
-   */
-  getDOMPosition(element) {
-    let position = 0;
-    let sibling = element;
-    
-    // Contar elementos anteriores en el árbol
-    while (sibling) {
-      sibling = sibling.previousElementSibling;
-      position++;
-    }
-    
-    // Agregar posición de ancestros
-    let parent = element.parentElement;
-    while (parent && parent !== document.body) {
-      let parentSibling = parent;
-      while (parentSibling) {
-        parentSibling = parentSibling.previousElementSibling;
-        position += 1000; // Multiplicador para mantener orden
-      }
-      parent = parent.parentElement;
-    }
-    
-    return position;
-  }
-
   getTextElements() {
     const textElements = [];
     const processed = new Set();
@@ -796,29 +777,67 @@ export class A11yChecker {
   }
 
   parseColor(color) {
-    if (color.startsWith('rgb')) {
-      const matches = color.match(/\d+/g);
-      return matches ? matches.map(Number) : [255, 255, 255];
-    } else if (color.startsWith('#')) {
-      const hex = color.substring(1);
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
-      return [r, g, b];
+    if (!color || typeof color !== 'string') return null;
+
+    if (color.startsWith('rgb') || color.startsWith('hsl')) {
+      const matches = color.match(/\d+\.?\d*/g);
+      if (!matches || matches.length < 3) return null;
+      const r = Number(matches[0]);
+      const g = Number(matches[1]);
+      const b = Number(matches[2]);
+      const a = matches.length >= 4 ? Number(matches[3]) : 1;
+      return [Math.min(255, Math.max(0, r)), Math.min(255, Math.max(0, g)), Math.min(255, Math.max(0, b)), Math.min(1, Math.max(0, a))];
     }
-    return [255, 255, 255];
+
+    if (color.startsWith('#')) {
+      let hex = color.substring(1);
+
+      if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      }
+      if (hex.length === 4) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+      }
+
+      if (hex.length >= 6) {
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const a = hex.length >= 8 ? parseInt(hex.substring(6, 8), 16) / 255 : 1;
+        if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+        return [r, g, b, a];
+      }
+
+      return null;
+    }
+
+    return null;
   }
 
   calculateContrast(color1, color2) {
     const rgb1 = this.parseColor(color1);
     const rgb2 = this.parseColor(color2);
-    
-    const lum1 = this.rgbToLuminance(rgb1[0], rgb1[1], rgb1[2]);
+
+    if (!rgb1 || !rgb2) return null;
+
+    const fgAlpha = rgb1[3] !== undefined ? rgb1[3] : 1;
+
+    const r = fgAlpha < 1
+      ? Math.round(rgb1[0] * fgAlpha + rgb2[0] * (1 - fgAlpha))
+      : rgb1[0];
+    const g = fgAlpha < 1
+      ? Math.round(rgb1[1] * fgAlpha + rgb2[1] * (1 - fgAlpha))
+      : rgb1[1];
+    const b = fgAlpha < 1
+      ? Math.round(rgb1[2] * fgAlpha + rgb2[2] * (1 - fgAlpha))
+      : rgb1[2];
+
+    const lum1 = this.rgbToLuminance(r, g, b);
     const lum2 = this.rgbToLuminance(rgb2[0], rgb2[1], rgb2[2]);
-    
+
     const lighter = Math.max(lum1, lum2);
     const darker = Math.min(lum1, lum2);
-    
+
     return (lighter + 0.05) / (darker + 0.05);
   }
 
@@ -913,11 +932,11 @@ export class A11yChecker {
         }
       } catch (_) {}
 
-      // Fallback: usar posición absoluta en el documento
+      // Fallback: usar posición entre hermanos del mismo tag
       const tag = element.tagName.toLowerCase();
       if (!element.parentElement) return tag;
-      const allOfTag = Array.from(document.getElementsByTagName(element.tagName));
-      const idx = allOfTag.indexOf(element) + 1;
+      const siblingsOfTag = Array.from(element.parentElement.children).filter(c => c.tagName === element.tagName);
+      const idx = siblingsOfTag.indexOf(element) + 1;
       return `${tag}:nth-of-type(${idx})`;
     } catch (e) {
       return element.tagName?.toLowerCase() || '*';

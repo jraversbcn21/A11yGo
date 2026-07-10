@@ -78,11 +78,7 @@ export function calculateTabOrder(elements) {
 export function getAccessibleName(element) {
   if (!element) return '';
 
-  // 1) aria-label directa
-  const ariaLabel = element.getAttribute?.('aria-label');
-  if (ariaLabel && ariaLabel.trim()) return ariaLabel.trim();
-
-  // 2) aria-labelledby
+  // 1) aria-labelledby (highest priority per accname 1.2 spec)
   const labelledBy = element.getAttribute?.('aria-labelledby');
   if (labelledBy) {
     const acc = labelledBy
@@ -96,18 +92,7 @@ export function getAccessibleName(element) {
     if (acc) return acc;
   }
 
-  // 3) imágenes: alt
-  if (element.tagName === 'IMG') {
-    const alt = element.getAttribute('alt');
-    if (alt && alt.trim()) return alt.trim();
-  }
-
-  // 4) title attribute
-  const titleAttr = element.getAttribute?.('title');
-  const visibleText = (element.innerText || element.textContent || '').trim();
-  if (titleAttr && titleAttr.trim()) return titleAttr.trim();
-
-  // 5) inputs: usar associated label
+  // 2) Associated label for form controls
   if (element.tagName === 'INPUT' || element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
     const id = element.id;
     if (id) {
@@ -120,11 +105,26 @@ export function getAccessibleName(element) {
     if (labelAncestorText) return labelAncestorText;
   }
 
-  // 6) fallback a texto visible del elemento
+  // 3) aria-label
+  const ariaLabel = element.getAttribute?.('aria-label');
+  if (ariaLabel && ariaLabel.trim()) return ariaLabel.trim();
+
+  // 4) Images: alt attribute
+  if (element.tagName === 'IMG') {
+    const alt = element.getAttribute('alt');
+    if (alt && alt.trim()) return alt.trim();
+  }
+
+  // 5) Visible text content
+  const visibleText = (element.innerText || element.textContent || '').trim();
   if (visibleText && visibleText.length <= 50) return visibleText;
   if (visibleText && visibleText.length > 50) return visibleText.substring(0, 50) + '...';
 
-  // 7) fallback a alt de imagen descendiente
+  // 6) title attribute (last resort per accname 1.2)
+  const titleAttr = element.getAttribute?.('title');
+  if (titleAttr && titleAttr.trim()) return titleAttr.trim();
+
+  // 7) Descendant img alt as final fallback
   const imgChild = element.querySelector?.('img[alt]');
   if (imgChild?.getAttribute('alt')) return imgChild.getAttribute('alt').trim();
 

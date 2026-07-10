@@ -73,35 +73,78 @@ describe('getAccessibleName', () => {
     expect(getAccessibleName(null)).toBe('');
   });
 
-  it('returns aria-label when present', () => {
+  it('aria-labelledby takes highest precedence over aria-label', () => {
+    const label = document.createElement('span');
+    label.id = 'over-label';
+    label.textContent = 'From labelledby';
+    document.body.appendChild(label);
+
     const el = document.createElement('button');
-    el.setAttribute('aria-label', 'Close dialog');
-    expect(getAccessibleName(el)).toBe('Close dialog');
+    el.setAttribute('aria-labelledby', 'over-label');
+    el.setAttribute('aria-label', 'From aria-label');
+    document.body.appendChild(el);
+
+    expect(getAccessibleName(el)).toBe('From labelledby');
+
+    document.body.removeChild(label);
+    document.body.removeChild(el);
   });
 
-  it('returns aria-labelledby referenced text', () => {
-    const label = document.createElement('span');
-    label.id = 'my-label';
-    label.textContent = 'Username';
+  it('associated label takes precedence over aria-label for inputs', () => {
+    const label = document.createElement('label');
+    label.setAttribute('for', 'prec-input');
+    label.textContent = 'From label';
     document.body.appendChild(label);
 
     const input = document.createElement('input');
-    input.setAttribute('aria-labelledby', 'my-label');
+    input.id = 'prec-input';
+    input.setAttribute('aria-label', 'From aria-label');
     document.body.appendChild(input);
 
-    expect(getAccessibleName(input)).toBe('Username');
+    const name = getAccessibleName(input);
+    expect(name).toBe('From label');
 
     document.body.removeChild(label);
     document.body.removeChild(input);
   });
 
-  it('returns alt text for images', () => {
+  it('aria-label falls back when no labelledby or label', () => {
+    const el = document.createElement('button');
+    el.setAttribute('aria-label', 'Close dialog');
+    expect(getAccessibleName(el)).toBe('Close dialog');
+  });
+
+  it('alt text for images after labelledby and aria-label but before text', () => {
     const img = document.createElement('img');
     img.setAttribute('alt', 'Company logo');
     expect(getAccessibleName(img)).toBe('Company logo');
   });
 
-  it('returns title attribute', () => {
+  it('aria-labelledby takes precedence over alt for images', () => {
+    const label = document.createElement('span');
+    label.id = 'img-label';
+    label.textContent = 'From labelledby';
+    document.body.appendChild(label);
+
+    const img = document.createElement('img');
+    img.setAttribute('aria-labelledby', 'img-label');
+    img.setAttribute('alt', 'Company logo');
+    document.body.appendChild(img);
+
+    expect(getAccessibleName(img)).toBe('From labelledby');
+
+    document.body.removeChild(label);
+    document.body.removeChild(img);
+  });
+
+  it('visible text takes precedence over title', () => {
+    const el = document.createElement('a');
+    el.setAttribute('title', 'Go to homepage');
+    el.textContent = 'Visible link text';
+    expect(getAccessibleName(el)).toBe('Visible link text');
+  });
+
+  it('falls back to title when no visible text', () => {
     const el = document.createElement('a');
     el.setAttribute('title', 'Go to homepage');
     expect(getAccessibleName(el)).toBe('Go to homepage');

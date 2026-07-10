@@ -11,6 +11,7 @@ export class KeyboardNav {
     this.tooltip = null;
     this.tooltipTimer = null;
     this.mutationObserver = null;
+    this.injectedTabIndexes = new Map();
   }
 
   activate() {
@@ -57,6 +58,22 @@ export class KeyboardNav {
     this.removeMutationObserver();
     this.removeHighlights();
     this.removeTooltip();
+    this.restoreInjectedTabIndexes();
+  }
+
+  restoreInjectedTabIndexes() {
+    this.injectedTabIndexes.forEach((originalValue, element) => {
+      try {
+        if (document.contains(element)) {
+          if (originalValue !== null) {
+            element.setAttribute('tabindex', originalValue);
+          } else {
+            element.removeAttribute('tabindex');
+          }
+        }
+      } catch (e) { /* ignorar */ }
+    });
+    this.injectedTabIndexes.clear();
   }
 
   calculateTabOrder(elements) {
@@ -312,17 +329,10 @@ export class KeyboardNav {
         // Método 1: focus() normal
         try {
           element.focus();
-          // Verificar inmediatamente y también después de un frame
           if (document.activeElement === element) {
             focused = true;
           } else {
             logger.warn(`KeyboardNav: focus() llamado pero activeElement es:`, document.activeElement);
-            // Verificar después de un frame por si el navegador necesita tiempo
-            requestAnimationFrame(() => {
-              if (document.activeElement === element) {
-                focused = true;
-              }
-            });
           }
         } catch (e) {
           logger.warn(`KeyboardNav: focus() falló:`, e);
@@ -336,8 +346,8 @@ export class KeyboardNav {
             element.focus();
             if (document.activeElement === element) {
               focused = true;
+              this.injectedTabIndexes.set(element, originalTabIndex);
             } else {
-              // Restaurar tabindex original si no funcionó
               if (originalTabIndex !== null) {
                 element.setAttribute('tabindex', originalTabIndex);
               } else {
@@ -465,17 +475,10 @@ export class KeyboardNav {
         // Método 1: focus() normal
         try {
           element.focus();
-          // Verificar inmediatamente y también después de un frame
           if (document.activeElement === element) {
             focused = true;
           } else {
             logger.warn(`KeyboardNav: focus() llamado pero activeElement es:`, document.activeElement);
-            // Verificar después de un frame por si el navegador necesita tiempo
-            requestAnimationFrame(() => {
-              if (document.activeElement === element) {
-                focused = true;
-              }
-            });
           }
         } catch (e) {
           logger.warn(`KeyboardNav: focus() falló:`, e);
@@ -489,8 +492,8 @@ export class KeyboardNav {
             element.focus();
             if (document.activeElement === element) {
               focused = true;
+              this.injectedTabIndexes.set(element, originalTabIndex);
             } else {
-              // Restaurar tabindex original si no funcionó
               if (originalTabIndex !== null) {
                 element.setAttribute('tabindex', originalTabIndex);
               } else {
@@ -812,7 +815,7 @@ export class KeyboardNav {
   }
 
   notifyDeactivation() {
-    // Notificar que la navegación por teclado se ha desactivado
+    if (this.onDeactivate) this.onDeactivate();
     if (!document || !document.body) return;
     if (!window.chrome || !chrome.runtime || !chrome.runtime.id) return;
     try {

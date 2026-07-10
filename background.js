@@ -8,25 +8,21 @@ chrome.runtime.onInstalled.addListener(() => {
 // Manejar mensajes desde popup y sidebar
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'textReader' || message.action === 'setSpeed') {
-    // Redirigir comandos del lector de texto y velocidad al content script
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, message);
+        chrome.tabs.sendMessage(tabs[0].id, message, () => {
+          void chrome.runtime?.lastError;
+        });
       }
     });
-    
-    // También guardar velocidad en storage si es setSpeed
+
     if (message.action === 'setSpeed') {
       chrome.storage.local.set({ textReaderSpeed: message.speed });
     }
-  }
-  
-  return true;
-});
 
-// Abrir sidebar cuando se hace clic en la acción
-chrome.action.onClicked.addListener(async (tab) => {
-  await chrome.sidePanel.open({ windowId: tab.windowId });
+    sendResponse({ success: true });
+    return true;
+  }
 });
 
 // Reinyectar content.js en cambios de navegación (incluye SPA)
@@ -42,7 +38,7 @@ async function injectContentToTab(tabId) {
       return; // No inyectar en páginas del navegador
     }
     
-    chrome.scripting.executeScript({
+    await chrome.scripting.executeScript({
       target: { tabId, allFrames: true },
       files: ['content.js']
     });

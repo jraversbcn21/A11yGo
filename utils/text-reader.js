@@ -16,6 +16,7 @@ export class TextReader {
     this.hoverElement = null;
     this.lastMousePosition = null;
     this.lastHoveredElement = null;
+    this.voicesRetryTimer = null;
     
     // Sistema de deduplicación para evitar redundancias
     this.lastReadText = '';
@@ -209,6 +210,10 @@ export class TextReader {
     this.removeTextSelection();
     this.removeHoverReading();
     this.removeEscapeHandler();
+    if (this.voicesRetryTimer) {
+      clearTimeout(this.voicesRetryTimer);
+      this.voicesRetryTimer = null;
+    }
     // Restaurar elementos de contenido a su estado original
     this.restoreContentElements();
     logger.log('TextReader: Desactivado completamente');
@@ -416,7 +421,7 @@ export class TextReader {
   }
 
   notifyDeactivation() {
-    // Notificar que el lector de texto se ha desactivado
+    if (this.onDeactivate) this.onDeactivate();
     if (!document || !document.body) return;
     if (!window.chrome || !chrome.runtime || !chrome.runtime.id) return;
     try {
@@ -676,6 +681,7 @@ export class TextReader {
         this.synthesis.cancel();
         // Esperar un momento para que la cancelación se complete
         await new Promise(resolve => setTimeout(resolve, 50));
+        if (!this.isActive) return;
       }
       this.isReading = false;
       this.removeHighlight();
@@ -707,6 +713,8 @@ export class TextReader {
       const lang = await this.detectLanguage(formattedText);
       const voice = await this.selectVoice(lang);
 
+      if (!this.isActive) return;
+
       logger.log('TextReader: Idioma detectado:', lang);
       logger.log('TextReader: Voz seleccionada:', voice?.name || 'ninguna');
       logger.log('TextReader: Texto formateado:', formattedText);
@@ -718,11 +726,13 @@ export class TextReader {
           this.synthesis.cancel();
           // Esperar un momento para que la cancelación se complete
           await new Promise(resolve => setTimeout(resolve, 100));
+          if (!this.isActive) return;
           
           // Verificar una vez más y cancelar si aún está activa
           if (this.synthesis.speaking || this.synthesis.pending) {
             this.synthesis.cancel();
             await new Promise(resolve => setTimeout(resolve, 50));
+            if (!this.isActive) return;
           }
         } catch (e) {
           // Ignorar errores al cancelar (puede que ya se haya cancelado)
@@ -883,6 +893,7 @@ export class TextReader {
           try {
             this.synthesis.cancel();
             await new Promise(resolve => setTimeout(resolve, 100));
+            if (!this.isActive) return;
           } catch (e) {
             // Ignorar errores al cancelar
           }
@@ -892,18 +903,21 @@ export class TextReader {
         const voices = this.synthesis.getVoices();
         if (voices.length === 0) {
           logger.warn('TextReader: No hay voces disponibles, esperando...');
-          // Esperar un poco y reintentar
-          setTimeout(() => {
+          if (this.voicesRetryTimer) clearTimeout(this.voicesRetryTimer);
+          this.voicesRetryTimer = setTimeout(() => {
+            if (!this.isActive) return;
             if (this.synthesis.getVoices().length > 0) {
               logger.log('TextReader: Voces cargadas, reintentando...');
               try {
-                // Verificar de nuevo que no haya síntesis activa
+                if (!this.isActive) return;
                 if (this.synthesis.speaking || this.synthesis.pending) {
                   this.synthesis.cancel();
                   setTimeout(() => {
+                    if (!this.isActive) return;
                     this.synthesis.speak(this.utterance);
                   }, 50);
                 } else {
+                  if (!this.isActive) return;
                   this.synthesis.speak(this.utterance);
                 }
               } catch (e) {
@@ -926,11 +940,13 @@ export class TextReader {
           try {
             this.synthesis.cancel();
             await new Promise(resolve => setTimeout(resolve, 50));
+            if (!this.isActive) return;
           } catch (e) {
             // Ignorar errores al cancelar
           }
         }
         
+        if (!this.isActive) return;
         this.synthesis.speak(this.utterance);
         logger.log('TextReader: Comando speak enviado');
       } catch (speakError) {
