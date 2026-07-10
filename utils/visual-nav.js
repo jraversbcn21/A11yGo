@@ -22,6 +22,7 @@ export class VisualNav {
     this.scrollHandler = null;
     this.resizeHandler = null;
     this.focusUpdateHandler = null;
+    this.rafId = null;
   }
 
   activate() {
@@ -44,11 +45,19 @@ export class VisualNav {
     this.removeFocusHandlers();
     this.removeEscapeHandler();
     this.removeUpdateHandlers();
+    this.stopAnimationLoop();
     // Limpiar historial al desactivar
     this.navigationHistory = [];
     this.lastNavigatedElement = null;
     this.notifyHistoryUpdate(); // Notificar para limpiar el sidebar
     logger.log('VisualNav: Desactivado completamente');
+  }
+
+  stopAnimationLoop() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
   }
 
   setupEscapeHandler() {
@@ -91,6 +100,7 @@ export class VisualNav {
   }
 
   updateSetting(setting, value) {
+    if (!this.isActive) return;
     if (this.settings.hasOwnProperty(setting)) {
       this.settings[setting] = value;
       this.applySettings();
@@ -462,16 +472,15 @@ export class VisualNav {
     const updateLoop = (timestamp) => {
       if (!this.isActive) return;
       
-      // Actualizar cada frame (60fps) para mantener sincronización perfecta
       const delta = timestamp - lastUpdate;
       if (delta >= 16) {
         this.updateAllOverlayPositions();
         lastUpdate = timestamp;
       }
       
-      requestAnimationFrame(updateLoop);
+      this.rafId = requestAnimationFrame(updateLoop);
     };
-    requestAnimationFrame(updateLoop);
+    this.rafId = requestAnimationFrame(updateLoop);
   }
   
   /**
@@ -498,6 +507,11 @@ export class VisualNav {
     if (this.updateTimer) {
       clearTimeout(this.updateTimer);
       this.updateTimer = null;
+    }
+    
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
     
     if (this.resizeObserver) {

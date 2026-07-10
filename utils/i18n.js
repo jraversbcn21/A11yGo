@@ -11,6 +11,9 @@ const translations = {
     activeIndicator: 'Activo',
     notSupportedPage: 'Esta función no está disponible en páginas del navegador',
     checkFailedError: 'Error al ejecutar la validación. Intenta recargar la página.',
+    checkRunning: 'Analizando página...',
+    noIssuesFound: 'No se encontraron problemas de accesibilidad',
+    noHistoryFound: 'No hay historial de navegación',
     
     // Funciones
     textReader: 'Lector de Texto',
@@ -90,6 +93,9 @@ const translations = {
     activeIndicator: 'Active',
     notSupportedPage: 'This function is not available on browser pages',
     checkFailedError: 'Validation error. Try reloading the page.',
+    checkRunning: 'Analyzing page...',
+    noIssuesFound: 'No accessibility issues found',
+    noHistoryFound: 'No navigation history',
     
     // Functions
     textReader: 'Text Reader',

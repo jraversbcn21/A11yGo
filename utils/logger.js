@@ -11,6 +11,11 @@ try {
     chrome.storage.local.get('a11yGoDebug', (result) => {
       debugEnabled = !!result.a11yGoDebug;
     });
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.a11yGoDebug) {
+        debugEnabled = !!changes.a11yGoDebug.newValue;
+      }
+    });
   }
 } catch (e) {
   // Context invalidated or no chrome API available

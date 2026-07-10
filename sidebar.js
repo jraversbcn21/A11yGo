@@ -127,6 +127,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.language) {
+      currentLanguage = changes.language.newValue || 'es';
+      i18n.init(currentLanguage).then(() => updateUI());
+    }
+  });
+
 });
 
 function updateUI() {
@@ -189,7 +196,7 @@ async function runA11yCheck() {
   if (resultsList) {
     const loadingItem = document.createElement('li');
     loadingItem.className = 'loading-message';
-    loadingItem.textContent = 'Analizando página...';
+    loadingItem.textContent = i18n.t('checkRunning');
     resultsList.innerHTML = '';
     resultsList.appendChild(loadingItem);
   }
@@ -269,7 +276,7 @@ function updateResults(results) {
   if (results.length === 0) {
     const emptyItem = document.createElement('li');
     emptyItem.className = 'history-empty';
-    emptyItem.textContent = 'No se encontraron problemas de accesibilidad';
+    emptyItem.textContent = i18n.t('noIssuesFound');
     resultsList.appendChild(emptyItem);
     return;
   }
@@ -392,12 +399,11 @@ function updateNavigationHistoryUI() {
   if (navigationHistory.length === 0) {
     const emptyItem = document.createElement('li');
     emptyItem.className = 'history-empty';
-    emptyItem.textContent = 'No hay historial de navegación';
+    emptyItem.textContent = i18n.t('noHistoryFound');
     historyList.appendChild(emptyItem);
     return;
   }
   
-  // Agregar cada entrada del historial
   navigationHistory.forEach((entry, index) => {
     const item = document.createElement('li');
     item.className = 'history-item';
@@ -448,7 +454,7 @@ function updateVisualNavHistoryUI() {
   if (visualNavHistory.length === 0) {
     const emptyItem = document.createElement('li');
     emptyItem.className = 'history-empty';
-    emptyItem.textContent = 'No hay historial de navegación';
+    emptyItem.textContent = i18n.t('noHistoryFound');
     historyList.appendChild(emptyItem);
     return;
   }
@@ -480,23 +486,25 @@ function updateTextReaderFocus(data) {
 }
 
 function addToTextReaderHistory(name, type) {
-  // Normalizar el nombre (eliminar espacios extra)
   const normalizedName = name.trim().replace(/\s+/g, ' ');
   
-  // Crear entrada del historial
+  if (lastTextReaderElement && 
+      lastTextReaderElement.name === normalizedName && 
+      lastTextReaderElement.type === type) {
+    return;
+  }
+  
   const historyEntry = {
     name: normalizedName,
     type: type,
     timestamp: Date.now()
   };
   
-  // Guardar como último elemento leído
   lastTextReaderElement = {
     name: normalizedName,
     type: type
   };
   
-  // Agregar al inicio del array
   textReaderHistory.unshift(historyEntry);
   
   // Limitar el tamaño del historial
@@ -521,7 +529,7 @@ function updateTextReaderHistoryUI() {
   if (textReaderHistory.length === 0) {
     const emptyItem = document.createElement('li');
     emptyItem.className = 'history-empty';
-    emptyItem.textContent = 'No hay historial de navegación';
+    emptyItem.textContent = i18n.t('noHistoryFound');
     historyList.appendChild(emptyItem);
     return;
   }
@@ -593,10 +601,14 @@ async function exportReport(format = 'json') {
     const header = 'Severity,Title,Description,Element';
     const rows = results.map(r =>
       [r.severity, r.title, r.description, r.element]
-        .map(v => `"${v.replace(/"/g, '""')}"`)
+        .map(v => {
+          const escaped = v.replace(/"/g, '""');
+          const safe = /^[=+\-@\t\r]/.test(escaped) ? "'" + escaped : escaped;
+          return `"${safe}"`;
+        })
         .join(',')
     );
-    blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+    blob = new Blob(['\uFEFF' + header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
     ext = 'csv';
   } else if (format === 'html') {
     const severityColor = { error: '#c62828', warning: '#f57c00', info: '#1976d2' };

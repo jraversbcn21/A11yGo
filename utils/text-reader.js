@@ -21,10 +21,8 @@ export class TextReader {
     // Sistema de deduplicación para evitar redundancias
     this.lastReadText = '';
     this.lastReadTime = 0;
-    this.DEDUPLICATION_WINDOW = 2000; // 2 segundos para considerar redundante
-    
-    // Detectar el idioma de la página al inicializar
-    this.pageLanguage = this.detectPageLanguage();
+    this.DEDUPLICATION_WINDOW = 2000;
+    this.readToken = 0;
   }
   
   detectPageLanguage() {
@@ -40,10 +38,11 @@ export class TextReader {
     const metaLang = document.querySelector('meta[http-equiv="content-language"]')?.content?.toLowerCase();
     if (metaLang && metaLang.startsWith('es')) {
       return 'es-ES';
+    } else if (metaLang && metaLang.startsWith('en')) {
+      return 'en-US';
     }
     
-    // Fallback: usar español por defecto
-    return 'es-ES';
+    return null; // No se pudo detectar, usar deteccion por contenido
   }
 
   async activate() {
@@ -59,38 +58,41 @@ export class TextReader {
     let voices = this.synthesis.getVoices();
     if (voices.length === 0) {
       logger.log('TextReader: Esperando a que se carguen las voces...');
-      // En Chrome, las voces se cargan de forma asíncrona
+      const prevHandler = this.synthesis.onvoiceschanged;
       await new Promise((resolve) => {
+        let attempts = 0;
+        const MAX_ATTEMPTS = 20;
         const checkVoices = () => {
           voices = this.synthesis.getVoices();
           if (voices.length > 0) {
             logger.log(`TextReader: ${voices.length} voces cargadas`);
             resolve();
+          } else if (++attempts >= MAX_ATTEMPTS) {
+            logger.warn('TextReader: No se pudieron cargar voces tras reintentos, continuando');
+            resolve();
           } else {
-            // Si después de 2 segundos no hay voces, continuar de todos modos
-            setTimeout(() => {
-              if (this.synthesis.getVoices().length === 0) {
-                logger.warn('TextReader: No se pudieron cargar voces, continuando de todos modos');
-              }
-              resolve();
-            }, 2000);
             setTimeout(checkVoices, 100);
           }
         };
         
-        // Escuchar el evento de cambio de voces
-        if (this.synthesis.onvoiceschanged !== null) {
-          this.synthesis.onvoiceschanged = () => {
-            voices = this.synthesis.getVoices();
-            if (voices.length > 0) {
-              logger.log(`TextReader: Voces cargadas vía evento: ${voices.length}`);
-              resolve();
-            }
-          };
-        }
+        this.synthesis.onvoiceschanged = () => {
+          voices = this.synthesis.getVoices();
+          if (voices.length > 0) {
+            logger.log(`TextReader: Voces cargadas vía evento: ${voices.length}`);
+            resolve();
+          }
+        };
+
+        setTimeout(() => {
+          if (this.synthesis.getVoices().length === 0) {
+            logger.warn('TextReader: Timeout esperando voces, continuando');
+          }
+          resolve();
+        }, 2000);
         
         checkVoices();
       });
+      this.synthesis.onvoiceschanged = prevHandler;
     } else {
       logger.log(`TextReader: ${voices.length} voces disponibles`);
     }
@@ -566,9 +568,9 @@ export class TextReader {
   }
 
   async detectLanguage(text) {
-    // SIEMPRE usar el idioma de la página si está disponible
-    if (this.pageLanguage) {
-      return this.pageLanguage;
+    const pageLang = this.detectPageLanguage();
+    if (pageLang) {
+      return pageLang;
     }
     
     // Fallback: Detectar idioma basado en caracteres comunes
@@ -598,11 +600,16 @@ export class TextReader {
     
     // Si no hay voces cargadas, esperar a que se carguen
     if (voices.length === 0) {
+      const prevHandler = this.synthesis.onvoiceschanged;
       voices = await new Promise((resolve) => {
+        let attempts = 0;
+        const MAX_ATTEMPTS = 20;
         const checkVoices = () => {
           const loadedVoices = this.synthesis.getVoices();
           if (loadedVoices.length > 0) {
             resolve(loadedVoices);
+          } else if (++attempts >= MAX_ATTEMPTS) {
+            resolve([]);
           } else {
             setTimeout(checkVoices, 100);
           }
@@ -610,6 +617,7 @@ export class TextReader {
         this.synthesis.onvoiceschanged = checkVoices;
         checkVoices();
       });
+      this.synthesis.onvoiceschanged = prevHandler;
     }
     
     // Filtrar voces por idioma
@@ -647,6 +655,7 @@ export class TextReader {
 
   async read(text) {
     if (!this.isActive) return;
+    const token = ++this.readToken;
     if (!text || !text.trim()) {
       logger.warn('TextReader: No hay texto para leer');
       return;
@@ -906,18 +915,22 @@ export class TextReader {
           if (this.voicesRetryTimer) clearTimeout(this.voicesRetryTimer);
           this.voicesRetryTimer = setTimeout(() => {
             if (!this.isActive) return;
+            if (this.readToken !== token) return;
             if (this.synthesis.getVoices().length > 0) {
               logger.log('TextReader: Voces cargadas, reintentando...');
               try {
                 if (!this.isActive) return;
+                if (this.readToken !== token) return;
                 if (this.synthesis.speaking || this.synthesis.pending) {
                   this.synthesis.cancel();
                   setTimeout(() => {
                     if (!this.isActive) return;
+                    if (this.readToken !== token) return;
                     this.synthesis.speak(this.utterance);
                   }, 50);
                 } else {
                   if (!this.isActive) return;
+                  if (this.readToken !== token) return;
                   this.synthesis.speak(this.utterance);
                 }
               } catch (e) {
@@ -947,6 +960,7 @@ export class TextReader {
         }
         
         if (!this.isActive) return;
+        if (this.readToken !== token) return;
         this.synthesis.speak(this.utterance);
         logger.log('TextReader: Comando speak enviado');
       } catch (speakError) {
@@ -1050,13 +1064,13 @@ export class TextReader {
                 this.highlightElements.push(span);
                 break; // Solo resaltar la primera ocurrencia
               } catch (e) {
-                // Si no se puede envolver, crear un marcador
                 try {
                   const marker = document.createElement('mark');
                   marker.textContent = text;
                   marker.style.backgroundColor = '#ffeb3b';
                   if (node.parentNode) {
                     node.parentNode.insertBefore(marker, node);
+                    node.parentNode.removeChild(node);
                     this.highlightElements.push(marker);
                   }
                 } catch (e2) {

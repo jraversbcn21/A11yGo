@@ -11,6 +11,7 @@ export class KeyboardNav {
     this.tooltip = null;
     this.tooltipTimer = null;
     this.mutationObserver = null;
+    this.updateTimeout = null;
     this.injectedTabIndexes = new Map();
   }
 
@@ -216,18 +217,16 @@ export class KeyboardNav {
   }
 
   setupMutationObserver() {
-    // Observar cambios en el DOM para actualizar elementos focusables
-    let updateTimeout = null;
+    this.updateTimeout = null;
     
     this.mutationObserver = new MutationObserver(() => {
       if (!this.isActive) return;
       
-      // Debounce: esperar 500ms antes de actualizar para evitar actualizaciones demasiado frecuentes
-      if (updateTimeout) {
-        clearTimeout(updateTimeout);
+      if (this.updateTimeout) {
+        clearTimeout(this.updateTimeout);
       }
       
-      updateTimeout = setTimeout(() => {
+      this.updateTimeout = setTimeout(() => {
         const previousCount = this.focusableElements.length;
         const previousIndex = this.currentIndex;
         const previousElement = this.focusableElements[previousIndex];
@@ -259,6 +258,10 @@ export class KeyboardNav {
   }
 
   removeMutationObserver() {
+    if (this.updateTimeout) {
+      clearTimeout(this.updateTimeout);
+      this.updateTimeout = null;
+    }
     if (this.mutationObserver) {
       this.mutationObserver.disconnect();
       this.mutationObserver = null;
