@@ -45,12 +45,12 @@ LICENSE                - Licencia MIT
 ```
 
 ## Arquitectura de Comunicación
-- **Popup → Content**: `chrome.tabs.sendMessage` para activar funciones
+- **Popup → Content**: `chrome.tabs.sendMessage` para activar funciones; el popup recibe `success: true/false` y muestra error en fallos reales
 - **Content → Sidebar**: `chrome.runtime.sendMessage` para actualizar UI (historial, resultados)
-- **Background**: Relay de mensajes + reinyección de content.js en navegaciones SPA
-- **Desactivación**: Cada módulo escucha Escape y notifica al content script
-- **Highlight de errores**: Click en resultado del sidebar → scroll + overlay animado (pulse) sobre el elemento en la página, con badge de severidad (12s auto-remove)
-- **Historiales**: Sidebar mantiene historiales independientes por herramienta (textReader, keyboardNav, visualNav) con deduplicación y límite de 20 entradas
+- **Background**: Relay de mensajes (con `sendResponse` explícito) + reinyección de content.js en navegaciones SPA (`await` en `executeScript`)
+- **Desactivación**: Cada módulo escucha Escape → llama `this.onDeactivate()` (callback asignado por content.js al instanciar) + notifica al sidebar vía `runtime.sendMessage`. Los callbacks limpian `activeFunctions` y resetean `activePanel` en storage.
+- **Highlight de errores**: Click en resultado del sidebar → scroll + overlay animado (pulse) sobre el elemento en la página, con badge de severidad (12s auto-remove). Enviado con `frameId: 0` y guard `window.top`.
+- **Historiales**: Sidebar mantiene historiales independientes por herramienta (textReader, keyboardNav, visualNav) con deduplicación y límite de 20 entradas. Filtra mensajes por `sender.tab.id` para evitar contaminación entre pestañas.
 
 ## Permisos
 activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all_urls>
@@ -66,8 +66,14 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - Debug se activa con: `chrome.storage.local.set({ a11yGoDebug: true })`
 - Popup muestra indicador visual (punto azul) en el botón de la función activa
 - Categorías de validación (9) configurables y persistentes en `chrome.storage.local`
-- Exportación de reportes en 3 formatos: JSON, CSV y HTML
+- Exportación de reportes en 3 formatos: JSON, CSV (con BOM UTF-8 y sanitización anti-inyección) y HTML
 - Contraste sobre gradientes: valida contra cada color stop (worst-case); sobre imágenes de fondo emite warning
+- Ciclo de vida de módulos usa `onDeactivate` callbacks (asignados por content.js) en vez de mensajería circular
+- `getAccessibleName` sigue precedencia [accname 1.2](https://www.w3.org/TR/accname-1.2/): labelledby → label → aria-label → alt → texto → title
+- `parseColor` retorna `null` para formatos no reconocidos (el caller omite el elemento) y compone alpha sobre fondo
+- `read()` del TTS usa token de invocación (`readToken`) para prevenir carreras entre llamadas concurrentes
+- `storage.onChanged` mantiene debug y lenguaje sincronizados en caliente en sidebar y logger
+- Toda cadena visible al usuario usa `i18n.t()` — sin strings hardcodeados
 
 ## Storage Keys (`chrome.storage.local`)
 - `language` — Idioma de la interfaz (`es` | `en`)
@@ -132,28 +138,43 @@ Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2
 
 ## Testing
 - Framework: Vitest con jsdom
-- 25 tests unitarios cubriendo funciones puras críticas
+- 30+ tests unitarios cubriendo funciones puras críticas (parseColor, calculateContrast, rgbToLuminance, calculateTabOrder, compareDOMOrder, getAccessibleName)
 - Mocks de Chrome API en `tests/setup.js`
-- Ejecutar: `npm test` o `npm run test:watch`
+- Ejecutar: `npm test` o `npm run test:watch` (requiere Node 22+)
+- Antes de tocar `a11y-checker.js` o `dom-utils.js`, añadir un test en `tests/` que reproduzca el bug
 
-## Deuda técnica conocida
+## Correcciones realizadas (Jul 2026)
 
-Bug hunt realizado el 2026-07-10 (4 revisores en paralelo + verificación manual de cada
-hallazgo contra el código). Plan de arreglo completo con archivos, líneas y fixes propuestos
-en **[`BUGFIX_PLAN.md`](./BUGFIX_PLAN.md)**. Resumen de lo más urgente (severidad alta):
+Bug hunt con 4 revisores en paralelo + verificación manual de cada hallazgo contra el código.
+Las 30 incidencias documentadas en **[`BUGFIX_PLAN.md`](./BUGFIX_PLAN.md)** fueron resueltas en
+4 fases. Resumen de las correcciones clave:
 
-- Tras pulsar Escape en cualquier herramienta, no se puede reactivar desde el popup en el
-  mismo ciclo de vida de la pestaña — `notifyDeactivation()` usa `runtime.sendMessage`, que
-  no vuelve al propio content script (`content.js`, ver Fase 1 del plan).
-- El lector TTS puede seguir hablando después de desactivarse (`text-reader.js: read()` no
-  re-verifica `isActive` tras sus `await`).
-- KeyboardNav puede dejar `tabindex="0"` inyectado permanentemente en la página bajo prueba,
-  enmascarando el propio defecto que se está evaluando (`keyboard-nav.js`, Método 2 de enfoque).
-- `parseColor()` en el motor de contraste ignora el canal alpha y falla con sintaxis de color
-  moderna (`oklch`, `lab`, `color()`), produciendo falsos positivos/negativos masivos
-  (`a11y-checker.js`).
-- Un fallo al ejecutar la validación se reporta en el sidebar como "sin problemas de
-  accesibilidad" en vez de mostrar un error (`sidebar.js: runA11yCheck()`).
+### Ciclo de vida (Fase 1)
+- `onDeactivate` callbacks asignados por `content.js` — los módulos ya no dependen de `runtime.sendMessage` para notificar su propia desactivación
+- TTS verifica `isActive` tras cada `await`; timer de reintento cancelado en `deactivate()`
+- KeyboardNav trackea tabindex inyectados en `Map` y los restaura en `deactivate()`
+- `activateFunctionDirectly` devuelve boolean; popup recibe `success: false` en fallos reales
 
-Antes de tocar `a11y-checker.js` o `dom-utils.js`, añadir un test en `tests/` que reproduzca
-el bug (el proyecto ya usa Vitest para estas funciones puras).
+### Motor de validación (Fase 2)
+- `parseColor`: soporta alpha de `rgba()`/`hsla()`, hex 3/4/8 dígitos, retorna `null` para `oklch`/`lab`/`color()`
+- `calculateContrast`: compone alpha del foreground sobre el background; null-safe
+- `getDOMPosition` reemplazado por `compareDOMOrder` de `dom-utils.js`
+- Falsos positivos corregidos: `alt=""` con `role=presentation`, `aria-checked="mixed"`, enlaces genéricos, `input type=image/reset`
+- `getAccessibleName` reordenado según spec accname 1.2
+- `getElementSelector`: `:nth-of-type` calcula índice entre hermanos, no global
+
+### Mensajería y sidebar (Fase 3)
+- Fallo de validación muestra mensaje de error (`checkFailedError`) en vez de "sin problemas"
+- `activeTabId` eliminado — `sendToContent` consulta siempre `chrome.tabs.query`
+- Mensajes a content script usan `{frameId: 0}`; `highlightElement` con guard `window.top`
+- `background.js` llama `sendResponse` tras relay; `onClicked` inalcanzable eliminado
+- Sidebar filtra mensajes por `sender.tab.id` contra pestaña activa
+- `i18n.notSupportedPage` y `i18n.checkFailedError` añadidas
+
+### Pulido (Fase 4)
+- VisualNav: `updateSetting` no-op si inactivo; rAF ID guardado y cancelado
+- TextReader: highlight sin duplicar texto; polling de voces limitado (20 intentos) + restaurar handler previo
+- `read()` reentrante vía `readToken`; idioma recalculado por lectura (no cacheado)
+- CSV: prefijo `'` en celdas con `=+-@\t\r` + BOM `\uFEFF`
+- Historial lector con dedup funcional; `storage.onChanged` en sidebar y logger
+- Strings de UI migrados a `i18n.t()`; MutationObserver debounce cancelado correctamente
