@@ -131,3 +131,25 @@ Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2
 - 25 tests unitarios cubriendo funciones puras críticas
 - Mocks de Chrome API en `tests/setup.js`
 - Ejecutar: `npm test` o `npm run test:watch`
+
+## Deuda técnica conocida
+
+Bug hunt realizado el 2026-07-10 (4 revisores en paralelo + verificación manual de cada
+hallazgo contra el código). Plan de arreglo completo con archivos, líneas y fixes propuestos
+en **[`BUGFIX_PLAN.md`](./BUGFIX_PLAN.md)**. Resumen de lo más urgente (severidad alta):
+
+- Tras pulsar Escape en cualquier herramienta, no se puede reactivar desde el popup en el
+  mismo ciclo de vida de la pestaña — `notifyDeactivation()` usa `runtime.sendMessage`, que
+  no vuelve al propio content script (`content.js`, ver Fase 1 del plan).
+- El lector TTS puede seguir hablando después de desactivarse (`text-reader.js: read()` no
+  re-verifica `isActive` tras sus `await`).
+- KeyboardNav puede dejar `tabindex="0"` inyectado permanentemente en la página bajo prueba,
+  enmascarando el propio defecto que se está evaluando (`keyboard-nav.js`, Método 2 de enfoque).
+- `parseColor()` en el motor de contraste ignora el canal alpha y falla con sintaxis de color
+  moderna (`oklch`, `lab`, `color()`), produciendo falsos positivos/negativos masivos
+  (`a11y-checker.js`).
+- Un fallo al ejecutar la validación se reporta en el sidebar como "sin problemas de
+  accesibilidad" en vez de mostrar un error (`sidebar.js: runA11yCheck()`).
+
+Antes de tocar `a11y-checker.js` o `dom-utils.js`, añadir un test en `tests/` que reproduzca
+el bug (el proyecto ya usa Vitest para estas funciones puras).
