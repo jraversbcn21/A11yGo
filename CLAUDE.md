@@ -74,6 +74,8 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - `read()` del TTS usa token de invocación (`readToken`) para prevenir carreras entre llamadas concurrentes
 - `storage.onChanged` mantiene debug y lenguaje sincronizados en caliente en sidebar y logger
 - Toda cadena visible al usuario usa `i18n.t()` — sin strings hardcodeados
+- Parámetro de catch sin uso se nombra `_` (ESLint lo ignora vía `caughtErrorsIgnorePattern`)
+- `npm run lint` debe quedar en 0 errores y 0 warnings antes de cualquier commit
 
 ## Storage Keys (`chrome.storage.local`)
 - `language` — Idioma de la interfaz (`es` | `en`)
@@ -130,7 +132,7 @@ Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2
 ## Desarrollo
 1. Cargar como extensión sin empaquetar en `chrome://extensions/`
 2. Activar modo desarrollador
-3. `npm install` para dependencias de desarrollo
+3. `npm install` para dependencias de desarrollo (requiere Node 22+, declarado en `engines`)
 4. `npm run lint` — ejecutar ESLint
 5. `npm test` — ejecutar tests unitarios (25 tests)
 6. `npm run build` — generar dist/ minificado para producción
