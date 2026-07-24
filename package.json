@@ -5,6 +5,9 @@
   "type": "module",
   "description": "Chrome extension for web accessibility testing",
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
