@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (stored.activePanel && stored.activePanel !== 'default') {
       switchPanel(stored.activePanel);
     }
-  } catch (e) { /* ignorar */ }
+  } catch (_) { /* ignorar */ }
 
   // Event listeners
   document.getElementById('closeBtn').addEventListener('click', () => {

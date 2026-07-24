@@ -17,7 +17,7 @@ try {
       }
     });
   }
-} catch (e) {
+} catch (_) {
   // Context invalidated or no chrome API available
 }
 
@@ -37,7 +37,7 @@ export const logger = {
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         chrome.storage.local.set({ a11yGoDebug: enabled });
       }
-    } catch (e) {
+    } catch (_) {
       // Context invalidated
     }
   }

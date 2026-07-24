@@ -141,7 +141,7 @@ export class A11yChecker {
           } else if (alt === '' && img.getAttribute('src') && role !== 'presentation' && role !== 'none') {
             this.addResult('warning', 'emptyAltText', 'Imagen con alt vacío (debe tener descripción o role="presentation")', img);
           }
-        } catch (e) {
+        } catch (_) {
           // Silenciar errores de imágenes individuales
         }
       });
@@ -260,7 +260,7 @@ export class A11yChecker {
               if (label) {
                 hasLabel = true;
               }
-            } catch (e) {
+            } catch (_) {
               // Error al escapar ID, ignorar
             }
           }
@@ -277,7 +277,7 @@ export class A11yChecker {
           } else if (!hasLabel && placeholder) {
             this.addResult('warning', 'placeholderAsLabel', 'Usar placeholder como etiqueta puede causar problemas de accesibilidad', input);
           }
-        } catch (e) {
+        } catch (_) {
           // Silenciar errores de inputs individuales
         }
       });
@@ -293,7 +293,7 @@ export class A11yChecker {
           try {
             const style = window.getComputedStyle(h);
             return style.display !== 'none' && style.visibility !== 'hidden';
-          } catch (e) {
+          } catch (_) {
             return false;
           }
         });
@@ -325,7 +325,7 @@ export class A11yChecker {
           }
 
           previousLevel = level;
-        } catch (e) {
+        } catch (_) {
           // Silenciar errores de encabezados individuales
         }
       });
@@ -355,7 +355,7 @@ export class A11yChecker {
       const foundLandmarks = landmarks.some(selector => {
         try {
           return document.querySelector(selector);
-        } catch (e) {
+        } catch (_) {
           return false;
         }
       });
@@ -395,7 +395,7 @@ export class A11yChecker {
           } else if (text.match(/^(click|click here|here|read more|more|link|aquí|leer más|más|haz clic|haz clic aquí|clic aquí|haga clic aquí|learn more|info|details|ver más|seguir leyendo)$/i)) {
             this.addResult('warning', 'genericLinkText', 'Texto de enlace genérico, proporciona contexto', link);
           }
-        } catch (e) {
+        } catch (_) {
           // Silenciar errores de enlaces individuales
         }
       });
@@ -427,7 +427,7 @@ export class A11yChecker {
               `Elemento con role="${role}" sin etiqueta`, element);
           }
           roleCount++;
-        } catch (e) {
+        } catch (_) {
           // Silenciar errores de elementos individuales
         }
       });
@@ -465,11 +465,11 @@ export class A11yChecker {
                 }
               }
               ariaCount++;
-            } catch (e) {
+            } catch (_) {
               // Silenciar errores de atributos individuales
             }
           });
-        } catch (e) {
+        } catch (_) {
           // Silenciar errores de elementos individuales
         }
       });
@@ -499,7 +499,7 @@ export class A11yChecker {
                 `Elemento interactivo no accesible por teclado`, element);
             }
           }
-        } catch (e) {
+        } catch (_) {
           // Silenciar errores de elementos individuales
         }
       });
@@ -645,7 +645,7 @@ export class A11yChecker {
         try {
           const style = window.getComputedStyle(el);
           if (style.display === 'none' || style.visibility === 'hidden') return;
-        } catch (e) {
+        } catch (_) {
           return;
         }
         
@@ -938,7 +938,7 @@ export class A11yChecker {
       const siblingsOfTag = Array.from(element.parentElement.children).filter(c => c.tagName === element.tagName);
       const idx = siblingsOfTag.indexOf(element) + 1;
       return `${tag}:nth-of-type(${idx})`;
-    } catch (e) {
+    } catch (_) {
       return element.tagName?.toLowerCase() || '*';
     }
   }

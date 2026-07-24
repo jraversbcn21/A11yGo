@@ -42,7 +42,7 @@ async function injectContentToTab(tabId) {
       target: { tabId, allFrames: true },
       files: ['content.js']
     });
-  } catch (e) {
+  } catch (_) {
     // ignorar errores silenciosamente
   }
 }

@@ -72,7 +72,7 @@ export class KeyboardNav {
             element.removeAttribute('tabindex');
           }
         }
-      } catch (e) { /* ignorar */ }
+      } catch (_) { /* ignorar */ }
     });
     this.injectedTabIndexes.clear();
   }

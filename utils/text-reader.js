@@ -176,7 +176,7 @@ export class TextReader {
                style.opacity !== '0' &&
                !el.hasAttribute('aria-hidden') &&
                el.offsetParent !== null; // Está en el flujo del documento
-      } catch (e) {
+      } catch (_) {
         return false;
       }
     });
@@ -363,7 +363,7 @@ export class TextReader {
           this.modifiedElements.push(element);
           processedElements.add(element);
         }
-      } catch (e) {
+      } catch (_) {
         // Silenciar errores
       }
     });
@@ -387,7 +387,7 @@ export class TextReader {
         element.removeAttribute('data-textreader-original-tabindex');
         element.removeAttribute('data-textreader-price');
         element.classList.remove('textreader-focusable');
-      } catch (e) {
+      } catch (_) {
         // Silenciar errores
       }
     });
@@ -701,7 +701,7 @@ export class TextReader {
           this.utterance.onerror = null;
           this.utterance.onstart = null;
           this.utterance.onend = null;
-        } catch (e) {
+        } catch (_) {
           // Ignorar errores al limpiar handlers
         }
         this.utterance = null;
@@ -743,7 +743,7 @@ export class TextReader {
             await new Promise(resolve => setTimeout(resolve, 50));
             if (!this.isActive) return;
           }
-        } catch (e) {
+        } catch (_) {
           // Ignorar errores al cancelar (puede que ya se haya cancelado)
         }
       }
@@ -869,7 +869,7 @@ export class TextReader {
               self.isReading = false;
               try {
                 self.removeHighlight();
-              } catch (e) {
+              } catch (_) {
                 // Ignorar errores menores al remover highlight
               }
               
@@ -903,7 +903,7 @@ export class TextReader {
             this.synthesis.cancel();
             await new Promise(resolve => setTimeout(resolve, 100));
             if (!this.isActive) return;
-          } catch (e) {
+          } catch (_) {
             // Ignorar errores al cancelar
           }
         }
@@ -954,7 +954,7 @@ export class TextReader {
             this.synthesis.cancel();
             await new Promise(resolve => setTimeout(resolve, 50));
             if (!this.isActive) return;
-          } catch (e) {
+          } catch (_) {
             // Ignorar errores al cancelar
           }
         }
@@ -1063,7 +1063,7 @@ export class TextReader {
                 range.surroundContents(span);
                 this.highlightElements.push(span);
                 break; // Solo resaltar la primera ocurrencia
-              } catch (e) {
+              } catch (_) {
                 try {
                   const marker = document.createElement('mark');
                   marker.textContent = text;

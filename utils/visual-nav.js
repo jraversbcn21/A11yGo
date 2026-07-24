@@ -449,7 +449,7 @@ export class VisualNav {
     this.focusableElements.forEach(element => {
       try {
         this.resizeObserver.observe(element);
-      } catch (e) {
+      } catch (_) {
         // Ignorar errores si el elemento no es observable
       }
     });
