@@ -39,6 +39,14 @@ export default [
     }
   },
   {
+    files: ["build.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      }
+    }
+  },
+  {
     ignores: ["node_modules/", "dist/"]
   }
 ];

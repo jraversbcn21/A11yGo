@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { A11yChecker } from '../utils/a11y-checker.js';
 
 describe('A11yChecker - color utilities', () => {
