@@ -530,7 +530,7 @@ export class TextReader {
     }, 500);
   }
 
-  handleHoverMouseOut(e) {
+  handleHoverMouseOut(_e) {
     if (this.hoverTimeout) {
       clearTimeout(this.hoverTimeout);
       this.hoverTimeout = null;
@@ -1342,7 +1342,6 @@ export class TextReader {
     const tag = element.tagName?.toUpperCase() || '';
     const role = element.getAttribute?.('role')?.toLowerCase() || '';
     const type = element.getAttribute?.('type')?.toLowerCase() || '';
-    const ariaLabel = element.getAttribute?.('aria-label');
     const ariaLevel = element.getAttribute?.('aria-level');
     
     // Priorizar role sobre tag

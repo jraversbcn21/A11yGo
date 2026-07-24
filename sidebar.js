@@ -174,7 +174,7 @@ async function sendToContent(message) {
     return;
   }
   try {
-    chrome.tabs.sendMessage(tabId, message, { frameId: 0 }, (response) => {
+    chrome.tabs.sendMessage(tabId, message, { frameId: 0 }, () => {
       if (chrome.runtime.lastError) {
         logger.error('Sidebar: Error enviando mensaje:', chrome.runtime.lastError);
       }
@@ -281,7 +281,7 @@ function updateResults(results) {
     return;
   }
 
-  results.forEach((result, index) => {
+  results.forEach((result) => {
     try {
       const item = document.createElement('li');
       item.className = `result-item ${result.severity}`;
@@ -404,7 +404,7 @@ function updateNavigationHistoryUI() {
     return;
   }
   
-  navigationHistory.forEach((entry, index) => {
+  navigationHistory.forEach((entry) => {
     const item = document.createElement('li');
     item.className = 'history-item';
     
@@ -460,7 +460,7 @@ function updateVisualNavHistoryUI() {
   }
   
   // Agregar cada entrada del historial
-  visualNavHistory.forEach((entry, index) => {
+  visualNavHistory.forEach((entry) => {
     const item = document.createElement('li');
     item.className = 'history-item';
     
@@ -535,7 +535,7 @@ function updateTextReaderHistoryUI() {
   }
   
   // Agregar cada entrada del historial
-  textReaderHistory.forEach((entry, index) => {
+  textReaderHistory.forEach((entry) => {
     const item = document.createElement('li');
     item.className = 'history-item';
     

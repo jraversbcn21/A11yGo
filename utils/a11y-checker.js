@@ -567,7 +567,6 @@ export class A11yChecker {
       // Verificar saltos en el orden de tabindex positivo
       if (positiveTabIndex.length > 0) {
         const sorted = [...new Set(positiveTabIndex)].sort((a, b) => a - b);
-        const maxTabIndex = Math.max(...sorted);
         
         // Detectar saltos grandes (puede indicar problemas)
         for (let i = 0; i < sorted.length - 1; i++) {

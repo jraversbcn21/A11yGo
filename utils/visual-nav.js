@@ -383,7 +383,7 @@ export class VisualNav {
     if (!this.isActive) return;
     
     // Actualizar overlays de elementos
-    this.overlays.forEach((overlay, index) => {
+    this.overlays.forEach((overlay) => {
       const element = overlay._elementRef;
       if (element) {
         this.updateOverlayPosition(overlay, element);
