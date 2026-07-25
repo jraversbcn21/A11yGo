@@ -69,6 +69,7 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - Categorías de validación (9) configurables y persistentes en `chrome.storage.local`
 - Exportación de reportes en 3 formatos: JSON, CSV (con BOM UTF-8 y sanitización anti-inyección) y HTML
 - Contraste sobre gradientes: valida contra cada color stop (worst-case); sobre imágenes de fondo emite warning
+- Colores modernos no soportados (`oklch`/`oklab`/`lab`/`lch`/`color()`) emiten warning `unsupportedColor` en vez de omitirse en silencio; `describeUnsupportedColor` clasifica el formato y `getBackgroundInfo` marca gradientes con stops no extraíbles como `{ type: 'unsupported' }`
 - Ciclo de vida de módulos usa `onDeactivate` callbacks (asignados por content.js) en vez de mensajería circular
 - `getAccessibleName` sigue precedencia [accname 1.2](https://www.w3.org/TR/accname-1.2/): labelledby → label → aria-label → alt → texto → title
 - `parseColor` retorna `null` para formatos no reconocidos (el caller omite el elemento) y compone alpha sobre fondo
