@@ -116,6 +116,11 @@ npm run build        # Generar dist/ minificado
 npm run package      # Build + ZIP para Chrome Web Store
 ```
 
+## Privacidad
+
+A11yGo se ejecuta enteramente en tu navegador: no recopila, transmite ni comparte datos personales,
+y no incluye analítica ni publicidad. Ver la [Política de Privacidad](PRIVACY.md) (es/en).
+
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE)

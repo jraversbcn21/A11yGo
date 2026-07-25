@@ -45,6 +45,7 @@ vitest.config.js       - Configuración Vitest con jsdom
 build.js               - Script esbuild: minifica JS → dist/ (--package genera ZIP para Web Store)
 .gitignore             - Excluye node_modules, dist, *.zip, *.crx, *.pem, .claude/
 LICENSE                - Licencia MIT
+PRIVACY.md             - Política de privacidad (es/en) para la Chrome Web Store; contacto sidmaierlabs@gmail.com
 ```
 
 ## Arquitectura de Comunicación
