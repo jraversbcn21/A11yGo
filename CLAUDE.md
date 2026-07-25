@@ -146,13 +146,14 @@ Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2
 2. Activar modo desarrollador
 3. `npm install` para dependencias de desarrollo (requiere Node 22+, declarado en `engines`)
 4. `npm run lint` — ejecutar ESLint
-5. `npm test` — ejecutar tests unitarios (25 tests)
+5. `npm test` — ejecutar tests unitarios (109 tests)
 6. `npm run build` — generar dist/ minificado para producción
 7. `npm run package` — build + generar ZIP listo para Chrome Web Store
 
 ## Testing
 - Framework: Vitest con jsdom
-- 30+ tests unitarios cubriendo funciones puras críticas (parseColor, calculateContrast, rgbToLuminance, calculateTabOrder, compareDOMOrder, getAccessibleName)
+- **109 tests unitarios** cubriendo el motor de validación (parseColor, calculateContrast, rgbToLuminance, describeUnsupportedColor), utilidades DOM (calculateTabOrder, compareDOMOrder, getAccessibleName), traversal de shadow DOM (deepQuerySelectorAll, resolveDeepSelector, selectores >>>) y auditoría de iframes (collectFrameContexts, selectores ::iframe::, checks por-documento)
+- **Sin cobertura de tests** (deuda conocida, ver [`docs/pendientes-produccion.md`](docs/pendientes-produccion.md)): `text-reader.js`, `keyboard-nav.js`, `visual-nav.js`, `content.js`
 - Mocks de Chrome API en `tests/setup.js`
 - Ejecutar: `npm test` o `npm run test:watch` (requiere Node 22+)
 - Antes de tocar `a11y-checker.js` o `dom-utils.js`, añadir un test en `tests/` que reproduzca el bug
