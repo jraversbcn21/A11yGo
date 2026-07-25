@@ -129,12 +129,14 @@ export function calculateTabOrder(elements) {
 export function getAccessibleName(element) {
   if (!element) return '';
 
+  const rootNode = element.getRootNode ? element.getRootNode() : document;
+
   // 1) aria-labelledby (highest priority per accname 1.2 spec)
   const labelledBy = element.getAttribute?.('aria-labelledby');
   if (labelledBy) {
     const acc = labelledBy
       .split(/\s+/)
-      .map(id => document.getElementById(id))
+      .map(id => (rootNode.getElementById ? rootNode.getElementById(id) : document.getElementById(id)))
       .filter(Boolean)
       .map(n => n.textContent?.trim() || '')
       .filter(Boolean)
@@ -147,7 +149,7 @@ export function getAccessibleName(element) {
   if (element.tagName === 'INPUT' || element.tagName === 'SELECT' || element.tagName === 'TEXTAREA') {
     const id = element.id;
     if (id) {
-      const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+      const label = rootNode.querySelector(`label[for="${CSS.escape(id)}"]`);
       const labelText = label?.innerText?.trim() || label?.textContent?.trim();
       if (labelText) return labelText;
     }

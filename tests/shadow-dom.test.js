@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { collectShadowRoots, deepQuerySelectorAll, resolveDeepSelector, compareDOMOrder } from '../utils/dom-utils.js';
+import { collectShadowRoots, deepQuerySelectorAll, resolveDeepSelector, compareDOMOrder, getAccessibleName } from '../utils/dom-utils.js';
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -152,5 +152,26 @@ describe('compareDOMOrder con shadow DOM', () => {
     const shadowEl = root.querySelector('span');
     expect(compareDOMOrder(before, shadowEl)).toBeLessThan(0);
     expect(compareDOMOrder(shadowEl, before)).toBeGreaterThan(0);
+  });
+});
+
+describe('getAccessibleName dentro de shadow DOM', () => {
+  it('resuelve aria-labelledby dentro del shadow root', () => {
+    const { root } = makeShadowHost(document.body);
+    root.innerHTML = '<span id="lbl">Nombre interno</span><input aria-labelledby="lbl">';
+    const input = root.querySelector('input');
+    expect(getAccessibleName(input)).toBe('Nombre interno');
+  });
+
+  it('resuelve label[for] dentro del shadow root', () => {
+    const { root } = makeShadowHost(document.body);
+    root.innerHTML = '<label for="campo">Etiqueta interna</label><input id="campo">';
+    const input = root.querySelector('input');
+    expect(getAccessibleName(input)).toBe('Etiqueta interna');
+  });
+
+  it('sigue funcionando para elementos del documento principal', () => {
+    document.body.innerHTML = '<label for="x">Doc label</label><input id="x">';
+    expect(getAccessibleName(document.getElementById('x'))).toBe('Doc label');
   });
 });
