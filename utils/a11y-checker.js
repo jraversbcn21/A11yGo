@@ -1,11 +1,12 @@
 // Motor de validación de accesibilidad
 import { logger } from './logger.js';
-import { compareDOMOrder } from './dom-utils.js';
+import { compareDOMOrder, collectShadowRoots, deepQuerySelectorAll } from './dom-utils.js';
 
 export class A11yChecker {
   constructor() {
     this.results = [];
     this.isActive = false;
+    this._shadowRoots = null;
   }
 
   activate() {
@@ -68,6 +69,11 @@ export class A11yChecker {
     logger.log('A11yChecker: Iniciando validación...');
 
     try {
+      this._shadowRoots = collectShadowRoots();
+      if (this._shadowRoots.length > 0) {
+        logger.log(`A11yChecker: ${this._shadowRoots.length} shadow root(s) abiertos detectados`);
+      }
+
       if (enabled('images')) {
         this.checkImages();
         logger.log('A11yChecker: ✓ Imágenes validadas');
@@ -122,12 +128,15 @@ export class A11yChecker {
     } catch (error) {
       logger.error('A11yChecker: Error durante validación:', error);
       return this.results; // Devolver lo que se haya recopilado hasta ahora
+    } finally {
+      // El DOM cambia entre validaciones: no cachear roots entre ejecuciones
+      this._shadowRoots = null;
     }
   }
 
   checkImages() {
     try {
-      const images = document.querySelectorAll('img');
+      const images = deepQuerySelectorAll('img', this._shadowRoots);
       logger.log(`A11yChecker: Verificando ${images.length} imágenes`);
       
       images.forEach(img => {
@@ -235,7 +244,7 @@ export class A11yChecker {
 
   checkFormLabels() {
     try {
-      const inputs = document.querySelectorAll('input, select, textarea');
+      const inputs = deepQuerySelectorAll('input, select, textarea', this._shadowRoots);
       logger.log(`A11yChecker: Verificando ${inputs.length} campos de formulario`);
       
       inputs.forEach(input => {
@@ -256,7 +265,7 @@ export class A11yChecker {
             hasLabel = true;
           } else if (id) {
             try {
-              const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+              const label = input.getRootNode().querySelector(`label[for="${CSS.escape(id)}"]`);
               if (label) {
                 hasLabel = true;
               }
@@ -288,7 +297,7 @@ export class A11yChecker {
 
   checkHeadings() {
     try {
-      const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+      const headings = deepQuerySelectorAll('h1, h2, h3, h4, h5, h6', this._shadowRoots)
         .filter(h => {
           try {
             const style = window.getComputedStyle(h);
@@ -354,7 +363,7 @@ export class A11yChecker {
 
       const foundLandmarks = landmarks.some(selector => {
         try {
-          return document.querySelector(selector);
+          return deepQuerySelectorAll(selector, this._shadowRoots).length > 0;
         } catch (_) {
           return false;
         }
@@ -365,7 +374,7 @@ export class A11yChecker {
       }
 
       // Verificar múltiples mains
-      const mains = document.querySelectorAll('main, [role="main"]');
+      const mains = deepQuerySelectorAll('main, [role="main"]', this._shadowRoots);
       if (mains.length > 1) {
         this.addResult('error', 'multipleMains', 'Múltiples elementos main encontrados', mains[1]);
       }
@@ -378,7 +387,7 @@ export class A11yChecker {
 
   checkLinks() {
     try {
-      const links = document.querySelectorAll('a[href]');
+      const links = deepQuerySelectorAll('a[href]', this._shadowRoots);
       logger.log(`A11yChecker: Verificando ${links.length} enlaces`);
       
       links.forEach(link => {
@@ -409,7 +418,7 @@ export class A11yChecker {
       logger.log('A11yChecker: Iniciando checkARIA...');
       
       // Verificar elementos con role pero sin label
-      const elementsWithRole = document.querySelectorAll('[role]');
+      const elementsWithRole = deepQuerySelectorAll('[role]', this._shadowRoots);
       logger.log(`A11yChecker: Verificando ${elementsWithRole.length} elementos con role`);
       
       let roleCount = 0;
@@ -437,8 +446,9 @@ export class A11yChecker {
       // Verificar ARIA inválidos - Limitar para evitar bloqueos
       logger.log('A11yChecker: Verificando atributos ARIA inválidos...');
       
-      const elementsWithAria = document.querySelectorAll(
-        '[aria-hidden], [aria-expanded], [aria-selected], [aria-checked], [aria-readonly], [aria-required], [aria-label], [aria-labelledby]'
+      const elementsWithAria = deepQuerySelectorAll(
+        '[aria-hidden], [aria-expanded], [aria-selected], [aria-checked], [aria-readonly], [aria-required], [aria-label], [aria-labelledby]',
+        this._shadowRoots
       );
       
       logger.log(`A11yChecker: Verificando ${elementsWithAria.length} elementos con atributos ARIA`);
@@ -482,8 +492,9 @@ export class A11yChecker {
 
   checkKeyboardAccess() {
     try {
-      const interactiveElements = document.querySelectorAll(
-        'a, button, input, select, textarea, [tabindex], [role="button"], [role="link"], [role="menuitem"], [role="tab"]'
+      const interactiveElements = deepQuerySelectorAll(
+        'a, button, input, select, textarea, [tabindex], [role="button"], [role="link"], [role="menuitem"], [role="tab"]',
+        this._shadowRoots
       );
       
       interactiveElements.forEach(element => {
@@ -523,7 +534,7 @@ export class A11yChecker {
         '[contenteditable="true"]'
       ].join(', ');
       
-      const allElements = Array.from(document.querySelectorAll(selectors));
+      const allElements = deepQuerySelectorAll(selectors, this._shadowRoots);
       const focusableElements = allElements.filter(el => {
         const tabIndex = el.getAttribute('tabindex');
         if (tabIndex === '-1') return false;
@@ -633,8 +644,8 @@ export class A11yChecker {
     const selectors = 'p, h1, h2, h3, h4, h5, h6, a, button, span, div, li, td, th, label, legend';
     
     try {
-      const elements = document.querySelectorAll(selectors);
-      
+      const elements = deepQuerySelectorAll(selectors, this._shadowRoots);
+
       elements.forEach(el => {
         if (processed.has(el)) return;
         

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { collectShadowRoots, deepQuerySelectorAll, resolveDeepSelector, compareDOMOrder, getAccessibleName } from '../utils/dom-utils.js';
+import { A11yChecker } from '../utils/a11y-checker.js';
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -173,5 +174,53 @@ describe('getAccessibleName dentro de shadow DOM', () => {
   it('sigue funcionando para elementos del documento principal', () => {
     document.body.innerHTML = '<label for="x">Doc label</label><input id="x">';
     expect(getAccessibleName(document.getElementById('x'))).toBe('Doc label');
+  });
+});
+
+// Categorías: solo la indicada activa
+function onlyCategory(cat) {
+  const all = ['images', 'contrast', 'forms', 'headings', 'landmarks', 'links', 'aria', 'keyboard', 'tabOrder'];
+  const categories = {};
+  for (const c of all) categories[c] = c === cat;
+  return categories;
+}
+
+describe('A11yChecker con shadow DOM', () => {
+  it('detecta imagen sin alt dentro de un shadow root', async () => {
+    const { root } = makeShadowHost(document.body);
+    root.innerHTML = '<img src="foto.png">';
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('images'));
+
+    const noAlt = results.filter(r => r.code === 'noAltText');
+    expect(noAlt.length).toBe(1);
+  });
+
+  it('detecta enlace vacío dentro de shadow roots anidados', async () => {
+    const outer = makeShadowHost(document.body);
+    const inner = makeShadowHost(outer.root);
+    inner.root.innerHTML = '<a href="/x"></a>';
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('links'));
+
+    expect(results.some(r => r.code === 'emptyLink')).toBe(true);
+  });
+
+  it('encuentra label[for] dentro del mismo shadow root (sin falso positivo)', async () => {
+    const { root } = makeShadowHost(document.body);
+    root.innerHTML = '<label for="c1">Nombre</label><input id="c1" type="text">';
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('forms'));
+
+    expect(results.some(r => r.code === 'missingLabel')).toBe(false);
+  });
+
+  it('limpia _shadowRoots al terminar', async () => {
+    const checker = new A11yChecker();
+    await checker.check(onlyCategory('images'));
+    expect(checker._shadowRoots).toBeNull();
   });
 });
