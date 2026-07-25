@@ -78,6 +78,11 @@ export class A11yChecker {
       this._crossOriginCount = frameData.crossOriginCount;
       this._contrastBudget = 100;
 
+      if (this._crossOriginCount > 0) {
+        this.addResult('info', 'crossOriginIframe',
+          `${this._crossOriginCount} iframe(s) de origen cruzado no pudieron auditarse (contenido cross-origin)`);
+      }
+
       for (const ctx of contexts) {
         this._currentDoc = ctx.doc;
         this._framePath = ctx.framePath;
@@ -947,7 +952,8 @@ export class A11yChecker {
       gradientContrast: 'Contraste sobre gradiente',
       bgImageContrast: 'Texto sobre imagen de fondo',
       closedShadow: 'Shadow DOM cerrado',
-      unsupportedColor: 'Contraste no verificable'
+      unsupportedColor: 'Contraste no verificable',
+      crossOriginIframe: 'Iframe de origen cruzado'
     };
     
     return titles[code] || code;
@@ -955,18 +961,32 @@ export class A11yChecker {
 
   getElementSelector(element) {
     try {
-      const root = element.getRootNode ? element.getRootNode() : document;
-      const segment = this.getSelectorInRoot(element, root);
+      const inDoc = this.getSelectorWithinDocument(element);
 
-      // Si el elemento vive en un shadow root, anteponer el selector del host
-      if (root && root.host) {
-        return `${this.getElementSelector(root.host)} >>> ${segment}`;
+      // Si el documento del elemento es el de un iframe, anteponer la ruta del frame una vez
+      const view = element.ownerDocument && element.ownerDocument.defaultView;
+      const frameEl = view && view.frameElement;
+      if (frameEl) {
+        return `${this.getElementSelector(frameEl)} ::iframe:: ${inDoc}`;
       }
 
-      return segment;
+      return inDoc;
     } catch (_) {
       return element.tagName?.toLowerCase() || '*';
     }
+  }
+
+  // Selector shadow-aware dentro del documento del elemento (sin cruzar iframes)
+  getSelectorWithinDocument(element) {
+    const root = element.getRootNode ? element.getRootNode() : document;
+    const segment = this.getSelectorInRoot(element, root);
+
+    // Si el elemento vive en un shadow root, anteponer el selector del host (mismo documento)
+    if (root && root.host) {
+      return `${this.getSelectorWithinDocument(root.host)} >>> ${segment}`;
+    }
+
+    return segment;
   }
 
   // Genera un selector válido DENTRO del root dado (Document o ShadowRoot)

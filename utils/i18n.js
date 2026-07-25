@@ -83,7 +83,8 @@ const translations = {
     missingRole: 'Falta atributo ARIA role',
     invalidAria: 'Atributo ARIA inválido',
     unsupportedColor: 'Contraste no verificable (color en formato no soportado)',
-    closedShadow: 'Shadow DOM cerrado'
+    closedShadow: 'Shadow DOM cerrado',
+    crossOriginIframe: 'Iframe de origen cruzado no auditable'
   },
   en: {
     // General
@@ -167,7 +168,8 @@ const translations = {
     missingRole: 'Missing ARIA role attribute',
     invalidAria: 'Invalid ARIA attribute',
     unsupportedColor: 'Contrast not verifiable (unsupported color format)',
-    closedShadow: 'Closed shadow DOM'
+    closedShadow: 'Closed shadow DOM',
+    crossOriginIframe: 'Cross-origin iframe not auditable'
   }
 };
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { A11yChecker } from '../utils/a11y-checker.js';
+import { resolveDeepSelector } from '../utils/dom-utils.js';
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -45,5 +46,44 @@ describe('A11yChecker audita iframes same-origin', () => {
     await checker.check(onlyCategory('images'));
     expect(checker._currentDoc).toBeNull();
     expect(checker._framePath).toBeNull();
+  });
+});
+
+describe('getElementSelector y aviso cross-origin', () => {
+  it('genera selector frame-aware resoluble para un elemento en iframe', () => {
+    const iframe = document.createElement('iframe');
+    iframe.id = 'fr';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.body.innerHTML = '<div><button>x</button></div>';
+    const target = iframe.contentDocument.querySelector('button');
+
+    const checker = new A11yChecker();
+    const sel = checker.getElementSelector(target);
+
+    expect(sel).toContain(' ::iframe:: ');
+    expect(resolveDeepSelector(sel)).toBe(target);
+
+    iframe.remove();
+  });
+
+  it('emite un aviso info crossOriginIframe con el recuento', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    Object.defineProperty(iframe, 'contentDocument', { get: () => null, configurable: true });
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('images'));
+
+    const notice = results.filter(r => r.code === 'crossOriginIframe');
+    expect(notice.length).toBe(1);
+    expect(notice[0].severity).toBe('info');
+    expect(notice[0].description).toContain('1');
+
+    iframe.remove();
+  });
+
+  it('getTitle devuelve el título de iframe cross-origin', () => {
+    const checker = new A11yChecker();
+    expect(checker.getTitle('crossOriginIframe')).toBe('Iframe de origen cruzado');
   });
 });
