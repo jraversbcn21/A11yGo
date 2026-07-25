@@ -289,6 +289,7 @@ if (window.a11yGoContentScriptLoaded) {
   let currentErrorOverlay = null;
   let currentOverlayTimer = null;
   let currentScrollHandler = null;
+  let currentScrollWindows = [];
 
   function ensureHighlightStyles() {
     if (document.getElementById('a11y-error-animations')) return;
@@ -339,6 +340,10 @@ if (window.a11yGoContentScriptLoaded) {
   function removeCurrentOverlay() {
     if (currentScrollHandler) {
       window.removeEventListener('scroll', currentScrollHandler, true);
+      for (const w of currentScrollWindows) {
+        try { w.removeEventListener('scroll', currentScrollHandler, true); } catch (_) {}
+      }
+      currentScrollWindows = [];
       currentScrollHandler = null;
     }
     if (currentOverlayTimer) {
@@ -368,6 +373,20 @@ if (window.a11yGoContentScriptLoaded) {
       view = view.frameElement.ownerDocument && view.frameElement.ownerDocument.defaultView;
     }
     return { top: offsetTop, left: offsetLeft };
+  }
+
+  // Ventanas de los iframes contenedores (same-origin) entre el elemento y el top.
+  // Se usan para reposicionar el overlay también cuando el scroll ocurre DENTRO de un iframe
+  // (los eventos de scroll no cruzan fronteras de documento).
+  function getFrameWindows(element) {
+    const wins = [];
+    let view = element.ownerDocument && element.ownerDocument.defaultView;
+    while (view && view !== window && view.frameElement) {
+      wins.push(view);
+      const fe = view.frameElement;
+      view = fe.ownerDocument && fe.ownerDocument.defaultView;
+    }
+    return wins;
   }
 
   function buildOverlay(element, severity) {
@@ -486,6 +505,13 @@ if (window.a11yGoContentScriptLoaded) {
             currentErrorOverlay.style.height = `${Math.max(r.height + PAD * 2, 30)}px`;
           };
           window.addEventListener('scroll', currentScrollHandler, { passive: true, capture: true });
+
+          // También escuchar el scroll dentro de los iframes contenedores (same-origin):
+          // sus eventos de scroll no llegan a la ventana top.
+          currentScrollWindows = getFrameWindows(element);
+          for (const w of currentScrollWindows) {
+            try { w.addEventListener('scroll', currentScrollHandler, { passive: true, capture: true }); } catch (_) {}
+          }
 
           // Eliminar overlay tras 12 segundos
           currentOverlayTimer = setTimeout(() => {
