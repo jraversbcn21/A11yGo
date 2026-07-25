@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { collectShadowRoots, deepQuerySelectorAll, resolveDeepSelector } from '../utils/dom-utils.js';
+import { collectShadowRoots, deepQuerySelectorAll, resolveDeepSelector, compareDOMOrder } from '../utils/dom-utils.js';
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -113,5 +113,44 @@ describe('resolveDeepSelector', () => {
   it('devuelve null para entradas inválidas', () => {
     expect(resolveDeepSelector('')).toBeNull();
     expect(resolveDeepSelector(null)).toBeNull();
+  });
+});
+
+describe('compareDOMOrder con shadow DOM', () => {
+  it('mantiene el comportamiento para elementos del mismo root', () => {
+    document.body.innerHTML = '<p id="a"></p><p id="b"></p>';
+    const a = document.getElementById('a');
+    const b = document.getElementById('b');
+    expect(compareDOMOrder(a, b)).toBeLessThan(0);
+    expect(compareDOMOrder(b, a)).toBeGreaterThan(0);
+  });
+
+  it('ordena elementos de shadow roots distintos por la posición de sus hosts', () => {
+    const first = makeShadowHost(document.body);
+    first.root.innerHTML = '<span>1</span>';
+    const second = makeShadowHost(document.body);
+    second.root.innerHTML = '<span>2</span>';
+    const a = first.root.querySelector('span');
+    const b = second.root.querySelector('span');
+    expect(compareDOMOrder(a, b)).toBeLessThan(0);
+    expect(compareDOMOrder(b, a)).toBeGreaterThan(0);
+  });
+
+  it('el host precede a su propio contenido shadow', () => {
+    const { host, root } = makeShadowHost(document.body);
+    root.innerHTML = '<span>dentro</span>';
+    const inner = root.querySelector('span');
+    expect(compareDOMOrder(host, inner)).toBeLessThan(0);
+    expect(compareDOMOrder(inner, host)).toBeGreaterThan(0);
+  });
+
+  it('ordena entre elemento del documento y elemento en shadow', () => {
+    const before = document.createElement('p');
+    document.body.appendChild(before);
+    const { root } = makeShadowHost(document.body);
+    root.innerHTML = '<span>s</span>';
+    const shadowEl = root.querySelector('span');
+    expect(compareDOMOrder(before, shadowEl)).toBeLessThan(0);
+    expect(compareDOMOrder(shadowEl, before)).toBeGreaterThan(0);
   });
 });

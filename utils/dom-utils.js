@@ -4,12 +4,63 @@
  */
 
 /**
- * Compara el orden de dos elementos en el DOM usando compareDocumentPosition
+ * Devuelve la cadena de hosts de un nodo hacia el documento:
+ * [nodo, host1, host2, ...] donde cada host es el del shadow root anterior.
+ */
+function getHostChain(node) {
+  const chain = [node];
+  let root = node.getRootNode ? node.getRootNode() : document;
+  while (root && root.host) {
+    chain.push(root.host);
+    root = root.host.getRootNode();
+  }
+  return chain;
+}
+
+/**
+ * Compara el orden de dos elementos en el DOM usando compareDocumentPosition.
+ * Shadow-aware: si están en roots distintos, compara por la cadena de hosts
+ * en el ancestro común; un host precede a su contenido shadow.
  */
 export function compareDOMOrder(a, b) {
   if (a === b) return 0;
 
-  const position = a.compareDocumentPosition(b);
+  let x = a;
+  let y = b;
+
+  const rootA = a.getRootNode ? a.getRootNode() : document;
+  const rootB = b.getRootNode ? b.getRootNode() : document;
+
+  if (rootA !== rootB) {
+    const chainA = getHostChain(a);
+    const chainB = getHostChain(b);
+    let i = chainA.length - 1;
+    let j = chainB.length - 1;
+
+    // Descartar el prefijo común desde el extremo del documento
+    while (i >= 0 && j >= 0 && chainA[i] === chainB[j]) {
+      i--;
+      j--;
+    }
+
+    // Cadena agotada: un elemento es host (ancestro) del otro → el host precede
+    if (i < 0) return -1;
+    if (j < 0) return 1;
+
+    x = chainA[i];
+    y = chainB[j];
+
+    // Si los representantes tampoco comparten root (no debería pasar),
+    // comparar los originales con el fallback visual de abajo
+    const rx = x.getRootNode ? x.getRootNode() : document;
+    const ry = y.getRootNode ? y.getRootNode() : document;
+    if (rx !== ry) {
+      x = a;
+      y = b;
+    }
+  }
+
+  const position = x.compareDocumentPosition(y);
 
   if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
     return -1;
