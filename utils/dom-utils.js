@@ -224,6 +224,9 @@ export function collectShadowRoots(root = document, maxDepth = 20) {
  * `baseDoc` especifica el documento a consultar (por defecto: el global).
  */
 export function deepQuerySelectorAll(selector, roots = null, baseDoc = document) {
+  // Un valor explícito null (no undefined) evita el default de parámetro:
+  // caemos al document global para no lanzar ni devolver vacío.
+  baseDoc = baseDoc || document;
   const shadowRoots = roots || collectShadowRoots(baseDoc);
   const results = [];
 
@@ -299,7 +302,13 @@ export function resolveDeepSelector(selector) {
  * recursiva. Devuelve la lista de contextos { doc, framePath } y el recuento de
  * iframes no auditables (cross-origin o de origen opaco: contentDocument inaccesible).
  */
-export function collectFrameContexts(rootDoc = document, framePath = []) {
+export function collectFrameContexts(rootDoc = document, framePath = [], depth = 0) {
+  // Límite de profundidad defensivo para árboles de iframes patológicos
+  // (mismo criterio que collectShadowRoots): no recursar más allá.
+  if (depth >= 20) {
+    return { contexts: [{ doc: rootDoc, framePath }], crossOriginCount: 0 };
+  }
+
   const contexts = [{ doc: rootDoc, framePath }];
   let crossOriginCount = 0;
 
@@ -319,7 +328,7 @@ export function collectFrameContexts(rootDoc = document, framePath = []) {
     }
 
     if (childDoc) {
-      const sub = collectFrameContexts(childDoc, [...framePath, iframe]);
+      const sub = collectFrameContexts(childDoc, [...framePath, iframe], depth + 1);
       contexts.push(...sub.contexts);
       crossOriginCount += sub.crossOriginCount;
     } else {

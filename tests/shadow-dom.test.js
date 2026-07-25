@@ -98,6 +98,13 @@ describe('deepQuerySelectorAll con baseDoc', () => {
     expect(result.length).toBe(1);
     expect(result[0].textContent).toBe('global');
   });
+
+  it('baseDoc explícito null cae de vuelta al document global (no lanza ni devuelve vacío)', () => {
+    document.body.innerHTML = '<button>global</button>';
+    const result = deepQuerySelectorAll('button', null, null);
+    expect(result.length).toBe(1);
+    expect(result[0].textContent).toBe('global');
+  });
 });
 
 describe('resolveDeepSelector', () => {
@@ -419,6 +426,22 @@ describe('collectFrameContexts', () => {
     const { contexts, crossOriginCount } = collectFrameContexts();
     expect(contexts.length).toBe(1);
     expect(crossOriginCount).toBe(1);
+
+    iframe.remove();
+  });
+
+  it('respeta el límite de profundidad y no recorre más allá', () => {
+    // Con un iframe real presente, sin guarda de profundidad se recursaría
+    // y devolvería 2 contextos; al invocar ya en depth=20 debe detenerse
+    // y devolver solo el documento actual, sin descender al iframe.
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    iframe.contentDocument.body.innerHTML = '<span>dentro</span>';
+
+    const { contexts, crossOriginCount } = collectFrameContexts(document, [], 20);
+    expect(contexts.length).toBe(1);
+    expect(contexts[0].doc).toBe(document);
+    expect(crossOriginCount).toBe(0);
 
     iframe.remove();
   });
