@@ -895,61 +895,74 @@ export class A11yChecker {
 
   getElementSelector(element) {
     try {
-      // Si tiene ID, es el selector más específico
-      if (element.id && /^[a-zA-Z][\w-]*$/.test(element.id)) {
-        return `#${CSS.escape(element.id)}`;
+      const root = element.getRootNode ? element.getRootNode() : document;
+      const segment = this.getSelectorInRoot(element, root);
+
+      // Si el elemento vive en un shadow root, anteponer el selector del host
+      if (root && root.host) {
+        return `${this.getElementSelector(root.host)} >>> ${segment}`;
       }
 
-      // Construir path completo desde el elemento hasta un ancestro con ID o body
-      const path = [];
-      let el = element;
-
-      while (el && el !== document.documentElement) {
-        // Si encontramos un ancestro con ID, usarlo como ancla y parar
-        if (el.id && /^[a-zA-Z][\w-]*$/.test(el.id)) {
-          path.unshift(`#${CSS.escape(el.id)}`);
-          break;
-        }
-
-        const tag = el.tagName.toLowerCase();
-        const parent = el.parentElement;
-
-        if (parent) {
-          // Contar cuántos hermanos del mismo tag hay — usar nth-of-type para ser específico
-          const sameTagSiblings = Array.from(parent.children).filter(c => c.tagName === el.tagName);
-          if (sameTagSiblings.length > 1) {
-            const idx = sameTagSiblings.indexOf(el) + 1;
-            path.unshift(`${tag}:nth-of-type(${idx})`);
-          } else {
-            path.unshift(tag);
-          }
-        } else {
-          path.unshift(tag);
-        }
-
-        el = el.parentElement;
-
-        // Limitar profundidad para no generar selectores extremadamente largos
-        if (path.length >= 6) break;
-      }
-
-      const selector = path.join(' > ');
-
-      // Verificar que el selector realmente apunta al elemento correcto
-      try {
-        if (document.querySelector(selector) === element) {
-          return selector;
-        }
-      } catch (_) {}
-
-      // Fallback: usar posición entre hermanos del mismo tag
-      const tag = element.tagName.toLowerCase();
-      if (!element.parentElement) return tag;
-      const siblingsOfTag = Array.from(element.parentElement.children).filter(c => c.tagName === element.tagName);
-      const idx = siblingsOfTag.indexOf(element) + 1;
-      return `${tag}:nth-of-type(${idx})`;
+      return segment;
     } catch (_) {
       return element.tagName?.toLowerCase() || '*';
     }
+  }
+
+  // Genera un selector válido DENTRO del root dado (Document o ShadowRoot)
+  getSelectorInRoot(element, root) {
+    // Si tiene ID, es el selector más específico
+    if (element.id && /^[a-zA-Z][\w-]*$/.test(element.id)) {
+      return `#${CSS.escape(element.id)}`;
+    }
+
+    // Construir path desde el elemento hasta un ancestro con ID o el límite del root
+    const path = [];
+    let el = element;
+
+    while (el && el !== document.documentElement && el !== root) {
+      // Si encontramos un ancestro con ID, usarlo como ancla y parar
+      if (el.id && /^[a-zA-Z][\w-]*$/.test(el.id)) {
+        path.unshift(`#${CSS.escape(el.id)}`);
+        break;
+      }
+
+      const tag = el.tagName.toLowerCase();
+      const parent = el.parentElement;
+
+      if (parent) {
+        // Contar cuántos hermanos del mismo tag hay — usar nth-of-type para ser específico
+        const sameTagSiblings = Array.from(parent.children).filter(c => c.tagName === el.tagName);
+        if (sameTagSiblings.length > 1) {
+          const idx = sameTagSiblings.indexOf(el) + 1;
+          path.unshift(`${tag}:nth-of-type(${idx})`);
+        } else {
+          path.unshift(tag);
+        }
+      } else {
+        path.unshift(tag);
+      }
+
+      el = el.parentElement;
+
+      // Limitar profundidad para no generar selectores extremadamente largos
+      if (path.length >= 6) break;
+    }
+
+    const selector = path.join(' > ');
+
+    // Verificar que el selector realmente apunta al elemento correcto dentro del root
+    try {
+      if (root.querySelector(selector) === element) {
+        return selector;
+      }
+    } catch (_) {}
+
+    // Fallback: usar posición entre hermanos del mismo tag
+    const tag = element.tagName.toLowerCase();
+    if (!element.parentElement) return tag;
+    const siblingsOfTag = Array.from(element.parentElement.children).filter(c => c.tagName === element.tagName);
+    const idx = siblingsOfTag.indexOf(element) + 1;
+    return `${tag}:nth-of-type(${idx})`;
   }
 }

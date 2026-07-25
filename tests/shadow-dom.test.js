@@ -224,3 +224,40 @@ describe('A11yChecker con shadow DOM', () => {
     expect(checker._shadowRoots).toBeNull();
   });
 });
+
+describe('getElementSelector con shadow DOM', () => {
+  it('elementos del documento mantienen el formato actual (sin >>>)', () => {
+    document.body.innerHTML = '<div><button id="btn">x</button></div>';
+    const checker = new A11yChecker();
+    const sel = checker.getElementSelector(document.getElementById('btn'));
+    expect(sel).toBe('#btn');
+    expect(sel).not.toContain('>>>');
+  });
+
+  it('elemento en shadow produce selector con >>> resoluble con resolveDeepSelector', () => {
+    const { host, root } = makeShadowHost(document.body);
+    host.id = 'mi-host';
+    root.innerHTML = '<div><button>dentro</button></div>';
+    const target = root.querySelector('button');
+
+    const checker = new A11yChecker();
+    const sel = checker.getElementSelector(target);
+
+    expect(sel).toContain(' >>> ');
+    expect(resolveDeepSelector(sel)).toBe(target);
+  });
+
+  it('shadow anidado produce dos separadores y resuelve al elemento', () => {
+    const outer = makeShadowHost(document.body);
+    outer.host.id = 'outer-host';
+    const inner = makeShadowHost(outer.root);
+    inner.root.innerHTML = '<span>profundo</span>';
+    const target = inner.root.querySelector('span');
+
+    const checker = new A11yChecker();
+    const sel = checker.getElementSelector(target);
+
+    expect(sel.split(' >>> ').length).toBe(3);
+    expect(resolveDeepSelector(sel)).toBe(target);
+  });
+});
