@@ -86,3 +86,49 @@ describe('getElementSelector y aviso cross-origin', () => {
     expect(checker.getTitle('crossOriginIframe')).toBe('Iframe de origen cruzado');
   });
 });
+
+describe('Ruido estructural: ausencia de estructura solo se reporta en el documento top', () => {
+  it('NO emite noHeadings para un iframe sin encabezados (el top sí tiene h1)', async () => {
+    document.body.innerHTML = '<h1>Top</h1>';
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    iframe.contentDocument.body.innerHTML = '<p>widget sin encabezados</p>';
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('headings'));
+
+    expect(results.some(r => r.code === 'noHeadings')).toBe(false);
+    iframe.remove();
+  });
+
+  it('SÍ emite noHeadings cuando el documento top no tiene encabezados', async () => {
+    document.body.innerHTML = '<p>página sin encabezados</p>';
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('headings'));
+
+    expect(results.some(r => r.code === 'noHeadings')).toBe(true);
+  });
+
+  it('NO emite missingLandmark para un iframe sin landmarks (el top sí tiene main)', async () => {
+    document.body.innerHTML = '<main><p>contenido top</p></main>';
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    iframe.contentDocument.body.innerHTML = '<p>widget sin landmarks</p>';
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('landmarks'));
+
+    expect(results.some(r => r.code === 'missingLandmark')).toBe(false);
+    iframe.remove();
+  });
+
+  it('SÍ emite missingLandmark cuando el documento top no tiene landmarks', async () => {
+    document.body.innerHTML = '<p>página sin landmarks</p>';
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('landmarks'));
+
+    expect(results.some(r => r.code === 'missingLandmark')).toBe(true);
+  });
+});

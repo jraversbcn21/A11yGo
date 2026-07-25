@@ -316,7 +316,12 @@ export class A11yChecker {
       logger.log(`A11yChecker: Verificando ${headings.length} encabezados`);
 
       if (headings.length === 0) {
-        this.addResult('warning', 'noHeadings', 'Página sin encabezados estructurados');
+        // La ausencia total de encabezados es un problema a nivel de página: solo se reporta
+        // en el documento top. Los sub-documentos (iframes) —widgets, anuncios, chats— no
+        // tienen por qué aportar su propia jerarquía de encabezados.
+        if (this._currentDoc === document) {
+          this.addResult('warning', 'noHeadings', 'Página sin encabezados estructurados');
+        }
         return;
       }
 
@@ -375,7 +380,9 @@ export class A11yChecker {
         }
       });
 
-      if (!foundLandmarks) {
+      // La ausencia de landmarks es una sugerencia a nivel de página: solo en el documento top.
+      // Un sub-documento embebido no tiene por qué definir sus propios landmarks.
+      if (!foundLandmarks && this._currentDoc === document) {
         this.addResult('info', 'missingLandmark', 'Considera agregar landmarks ARIA para mejorar la navegación');
       }
 
