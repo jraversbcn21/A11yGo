@@ -8,7 +8,6 @@ export class A11yChecker {
     this.isActive = false;
     this._shadowRoots = null;
     this._currentDoc = null;
-    this._framePath = null;
     this._contrastBudget = 0;
     this._crossOriginCount = 0;
   }
@@ -85,7 +84,6 @@ export class A11yChecker {
 
       for (const ctx of contexts) {
         this._currentDoc = ctx.doc;
-        this._framePath = ctx.framePath;
         this._shadowRoots = collectShadowRoots(ctx.doc);
 
         this.detectClosedShadowComponents();
@@ -115,7 +113,6 @@ export class A11yChecker {
       // El DOM cambia entre validaciones: no cachear estado entre ejecuciones
       this._shadowRoots = null;
       this._currentDoc = null;
-      this._framePath = null;
       this._contrastBudget = 0;
       this._crossOriginCount = 0;
     }

@@ -45,7 +45,6 @@ describe('A11yChecker audita iframes same-origin', () => {
     const checker = new A11yChecker();
     await checker.check(onlyCategory('images'));
     expect(checker._currentDoc).toBeNull();
-    expect(checker._framePath).toBeNull();
   });
 });
 
