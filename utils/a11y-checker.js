@@ -719,6 +719,9 @@ export class A11yChecker {
           if (colors.length > 0) {
             return { type: 'gradient', colors };
           }
+          // Gradiente detectado pero sin colores extraíbles (stops en oklch/lab/color()):
+          // no caer al fallback de backgroundColor, que compararía contra un fondo equivocado.
+          return { type: 'unsupported' };
         }
       }
 

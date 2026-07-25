@@ -8,6 +8,23 @@ describe('A11yChecker - color utilities', () => {
     checker = new A11yChecker();
   });
 
+  // Reemplaza window.getComputedStyle por un stub con defaults; fn(el) sobreescribe campos.
+  function stubComputedStyle(fn) {
+    const orig = window.getComputedStyle;
+    window.getComputedStyle = (el) => ({
+      color: 'rgb(0, 0, 0)',
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      backgroundImage: 'none',
+      fontSize: '16px',
+      fontWeight: '400',
+      display: 'block',
+      visibility: 'visible',
+      opacity: '1',
+      ...fn(el)
+    });
+    return () => { window.getComputedStyle = orig; };
+  }
+
   describe('parseColor', () => {
     it('parses rgb() format', () => {
       expect(checker.parseColor('rgb(255, 128, 0)')).toEqual([255, 128, 0, 1]);
@@ -169,6 +186,40 @@ describe('A11yChecker - color utilities', () => {
     it('detects insufficient contrast', () => {
       const ratio = checker.calculateContrast('rgb(200, 200, 200)', 'rgb(255, 255, 255)');
       expect(ratio).toBeLessThan(4.5);
+    });
+  });
+
+  describe('getBackgroundInfo', () => {
+    it('devuelve type unsupported para gradiente con stops en oklch', () => {
+      const el = document.createElement('div');
+      document.body.appendChild(el);
+      const restore = stubComputedStyle(node =>
+        node === el
+          ? { backgroundImage: 'linear-gradient(90deg, oklch(0.7 0.15 30), oklch(0.6 0.2 250))' }
+          : {}
+      );
+
+      expect(checker.getBackgroundInfo(el)).toEqual({ type: 'unsupported' });
+
+      restore();
+      el.remove();
+    });
+
+    it('sigue devolviendo gradient para stops rgb/hex', () => {
+      const el = document.createElement('div');
+      document.body.appendChild(el);
+      const restore = stubComputedStyle(node =>
+        node === el
+          ? { backgroundImage: 'linear-gradient(90deg, rgb(0,0,0), #ffffff)' }
+          : {}
+      );
+
+      const info = checker.getBackgroundInfo(el);
+      expect(info.type).toBe('gradient');
+      expect(info.colors.length).toBeGreaterThan(0);
+
+      restore();
+      el.remove();
     });
   });
 });
