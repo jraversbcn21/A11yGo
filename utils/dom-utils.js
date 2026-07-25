@@ -189,3 +189,28 @@ export function deepQuerySelectorAll(selector, roots = null) {
 
   return results;
 }
+
+/**
+ * Resuelve un selector con segmentos ` >>> ` (fronteras de shadow DOM)
+ * saltando de host en host. Devuelve el elemento o null si algún salto falla.
+ */
+export function resolveDeepSelector(selector) {
+  if (!selector || typeof selector !== 'string') return null;
+
+  const segments = selector.split(' >>> ');
+  let context = document;
+  let element = null;
+
+  for (const segment of segments) {
+    if (!context || typeof context.querySelector !== 'function') return null;
+    try {
+      element = context.querySelector(segment);
+    } catch (_) {
+      return null;
+    }
+    if (!element) return null;
+    context = element.shadowRoot;
+  }
+
+  return element;
+}

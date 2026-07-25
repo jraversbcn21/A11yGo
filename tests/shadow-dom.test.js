@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { collectShadowRoots, deepQuerySelectorAll } from '../utils/dom-utils.js';
+import { collectShadowRoots, deepQuerySelectorAll, resolveDeepSelector } from '../utils/dom-utils.js';
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -74,5 +74,44 @@ describe('deepQuerySelectorAll', () => {
 
   it('selector inválido devuelve array vacío sin lanzar', () => {
     expect(deepQuerySelectorAll(':::invalido:::')).toEqual([]);
+  });
+});
+
+describe('resolveDeepSelector', () => {
+  it('selector sin >>> equivale a document.querySelector', () => {
+    document.body.innerHTML = '<button id="btn">a</button>';
+    expect(resolveDeepSelector('#btn')).toBe(document.getElementById('btn'));
+  });
+
+  it('resuelve una ruta de dos niveles', () => {
+    const { host, root } = makeShadowHost(document.body);
+    host.id = 'host';
+    root.innerHTML = '<button>dentro</button>';
+    const el = resolveDeepSelector('#host >>> button');
+    expect(el).toBe(root.querySelector('button'));
+  });
+
+  it('resuelve una ruta de tres niveles', () => {
+    const outer = makeShadowHost(document.body);
+    outer.host.id = 'outer';
+    const inner = makeShadowHost(outer.root);
+    inner.host.classList.add('inner');
+    inner.root.innerHTML = '<span class="target">x</span>';
+    const el = resolveDeepSelector('#outer >>> .inner >>> .target');
+    expect(el).toBe(inner.root.querySelector('.target'));
+  });
+
+  it('devuelve null si un salto no existe', () => {
+    expect(resolveDeepSelector('#no-existe >>> button')).toBeNull();
+  });
+
+  it('devuelve null si el host intermedio no tiene shadow root abierto', () => {
+    document.body.innerHTML = '<div id="plain"></div>';
+    expect(resolveDeepSelector('#plain >>> button')).toBeNull();
+  });
+
+  it('devuelve null para entradas inválidas', () => {
+    expect(resolveDeepSelector('')).toBeNull();
+    expect(resolveDeepSelector(null)).toBeNull();
   });
 });
