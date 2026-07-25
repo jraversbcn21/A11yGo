@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { collectShadowRoots, deepQuerySelectorAll, resolveDeepSelector, compareDOMOrder, getAccessibleName } from '../utils/dom-utils.js';
+import { collectShadowRoots, deepQuerySelectorAll, resolveDeepSelector, compareDOMOrder, getAccessibleName, collectFrameContexts } from '../utils/dom-utils.js';
 import { A11yChecker } from '../utils/a11y-checker.js';
 
 beforeEach(() => {
@@ -341,5 +341,55 @@ describe('detección de shadow DOM cerrado (heurística)', () => {
     const results = await checker.check(onlyCategory('images'));
 
     expect(results.some(r => r.code === 'closedShadow')).toBe(false);
+  });
+});
+
+describe('collectFrameContexts', () => {
+  it('sin iframes devuelve solo el documento raíz', () => {
+    document.body.innerHTML = '<p>hola</p>';
+    const { contexts, crossOriginCount } = collectFrameContexts();
+    expect(contexts.length).toBe(1);
+    expect(contexts[0].doc).toBe(document);
+    expect(contexts[0].framePath).toEqual([]);
+    expect(crossOriginCount).toBe(0);
+  });
+
+  it('incluye el documento de un iframe same-origin con su framePath', () => {
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    iframe.contentDocument.body.innerHTML = '<span>dentro</span>';
+
+    const { contexts, crossOriginCount } = collectFrameContexts();
+    expect(contexts.length).toBe(2);
+    expect(contexts[1].doc).toBe(iframe.contentDocument);
+    expect(contexts[1].framePath).toEqual([iframe]);
+    expect(crossOriginCount).toBe(0);
+
+    iframe.remove();
+  });
+
+  it('recorre iframes anidados (3 contextos)', () => {
+    const outer = document.createElement('iframe');
+    document.body.appendChild(outer);
+    const inner = outer.contentDocument.createElement('iframe');
+    outer.contentDocument.body.appendChild(inner);
+
+    const { contexts } = collectFrameContexts();
+    expect(contexts.length).toBe(3);
+    expect(contexts[2].framePath).toEqual([outer, inner]);
+
+    outer.remove();
+  });
+
+  it('cuenta iframes no accesibles (contentDocument null) como cross-origin', () => {
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    Object.defineProperty(iframe, 'contentDocument', { get: () => null, configurable: true });
+
+    const { contexts, crossOriginCount } = collectFrameContexts();
+    expect(contexts.length).toBe(1);
+    expect(crossOriginCount).toBe(1);
+
+    iframe.remove();
   });
 });

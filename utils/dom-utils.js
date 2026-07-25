@@ -268,3 +268,40 @@ export function resolveDeepSelector(selector) {
 
   return element;
 }
+
+/**
+ * Enumera los documentos accesibles (same-origin) a partir de un documento raíz,
+ * recorriendo iframes (incluidos los que viven dentro de shadow roots) de forma
+ * recursiva. Devuelve la lista de contextos { doc, framePath } y el recuento de
+ * iframes no auditables (cross-origin o de origen opaco: contentDocument inaccesible).
+ */
+export function collectFrameContexts(rootDoc = document, framePath = []) {
+  const contexts = [{ doc: rootDoc, framePath }];
+  let crossOriginCount = 0;
+
+  let iframes;
+  try {
+    iframes = deepQuerySelectorAll('iframe', collectShadowRoots(rootDoc), rootDoc);
+  } catch (_) {
+    return { contexts, crossOriginCount };
+  }
+
+  for (const iframe of iframes) {
+    let childDoc = null;
+    try {
+      childDoc = iframe.contentDocument;
+    } catch (_) {
+      childDoc = null;
+    }
+
+    if (childDoc) {
+      const sub = collectFrameContexts(childDoc, [...framePath, iframe]);
+      contexts.push(...sub.contexts);
+      crossOriginCount += sub.crossOriginCount;
+    } else {
+      crossOriginCount++;
+    }
+  }
+
+  return { contexts, crossOriginCount };
+}
