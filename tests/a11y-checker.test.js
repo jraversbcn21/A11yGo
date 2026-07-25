@@ -304,4 +304,24 @@ describe('A11yChecker - color utilities', () => {
       expect(checker.getTitle('unsupportedColor')).toBe('Contraste no verificable');
     });
   });
+
+  describe('getStyle', () => {
+    it('usa la ventana dueña del elemento (defaultView del iframe)', () => {
+      const iframe = document.createElement('iframe');
+      document.body.appendChild(iframe);
+      const idoc = iframe.contentDocument;
+      idoc.body.innerHTML = '<p id="t">x</p>';
+      const el = idoc.getElementById('t');
+
+      const spy = idoc.defaultView.getComputedStyle;
+      let called = false;
+      idoc.defaultView.getComputedStyle = (...args) => { called = true; return spy.apply(idoc.defaultView, args); };
+
+      checker.getStyle(el);
+      expect(called).toBe(true);
+
+      idoc.defaultView.getComputedStyle = spy;
+      iframe.remove();
+    });
+  });
 });

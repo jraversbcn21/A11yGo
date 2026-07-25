@@ -176,7 +176,7 @@ export class A11yChecker {
     
     elementsToCheck.forEach((element, index) => {
       try {
-        const style = window.getComputedStyle(element);
+        const style = this.getStyle(element);
         const textColor = style.color;
 
         const unsupportedText = this.describeUnsupportedColor(textColor);
@@ -324,7 +324,7 @@ export class A11yChecker {
       const headings = deepQuerySelectorAll('h1, h2, h3, h4, h5, h6', this._shadowRoots)
         .filter(h => {
           try {
-            const style = window.getComputedStyle(h);
+            const style = this.getStyle(h);
             return style.display !== 'none' && style.visibility !== 'hidden';
           } catch (_) {
             return false;
@@ -524,7 +524,7 @@ export class A11yChecker {
       interactiveElements.forEach(element => {
         try {
           const tabindex = element.getAttribute('tabindex');
-          const style = window.getComputedStyle(element);
+          const style = this.getStyle(element);
           const disabled = element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true';
           
           if (tabindex === '-1' && !disabled && style.display !== 'none') {
@@ -563,9 +563,9 @@ export class A11yChecker {
         const tabIndex = el.getAttribute('tabindex');
         if (tabIndex === '-1') return false;
         
-        const style = window.getComputedStyle(el);
-        return style.display !== 'none' && 
-               style.visibility !== 'hidden' && 
+        const style = this.getStyle(el);
+        return style.display !== 'none' &&
+               style.visibility !== 'hidden' &&
                style.opacity !== '0' &&
                !el.hasAttribute('disabled') &&
                el.getAttribute('aria-hidden') !== 'true';
@@ -703,7 +703,7 @@ export class A11yChecker {
         if (!text || text.length === 0) return;
         
         try {
-          const style = window.getComputedStyle(el);
+          const style = this.getStyle(el);
           if (style.display === 'none' || style.visibility === 'hidden') return;
         } catch (_) {
           return;
@@ -723,11 +723,19 @@ export class A11yChecker {
     return textElements;
   }
 
+  // Obtiene los estilos computados usando la ventana dueña del elemento (necesario
+  // para elementos dentro de iframes same-origin; getComputedStyle debe invocarse
+  // sobre la ventana del documento del elemento).
+  getStyle(el) {
+    const view = el && el.ownerDocument && el.ownerDocument.defaultView;
+    return (view || window).getComputedStyle(el);
+  }
+
   getBackgroundInfo(element) {
     let el = element;
 
-    while (el && el !== document.documentElement) {
-      const style = window.getComputedStyle(el);
+    while (el && el !== element.ownerDocument.documentElement) {
+      const style = this.getStyle(el);
       const bgImage = style.backgroundImage;
 
       if (bgImage && bgImage !== 'none') {
@@ -755,7 +763,7 @@ export class A11yChecker {
       el = el.parentElement;
     }
 
-    const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+    const bodyBg = this.getStyle(element.ownerDocument.body).backgroundColor;
     if (bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' && bodyBg !== 'transparent') {
       return { type: 'solid', color: bodyBg };
     }
@@ -808,8 +816,8 @@ export class A11yChecker {
     let el = element;
     let bgColor = null;
     
-    while (el && el !== document.body) {
-      const style = window.getComputedStyle(el);
+    while (el && el !== element.ownerDocument.body) {
+      const style = this.getStyle(el);
       const bg = style.backgroundColor;
       
       if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
@@ -821,7 +829,7 @@ export class A11yChecker {
     }
     
     if (!bgColor) {
-      bgColor = window.getComputedStyle(document.body).backgroundColor;
+      bgColor = this.getStyle(element.ownerDocument.body).backgroundColor;
     }
     
     if (!bgColor || bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
