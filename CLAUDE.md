@@ -24,7 +24,7 @@ sidebar.html/js/css    - Panel lateral con controles, resultados, config de cate
 content.js             - Orquestador: carga módulos, gestiona activación/desactivación
 background.js          - Service worker (type: module): routing de mensajes, reinyección en SPAs
 utils/
-  dom-utils.js         - Funciones compartidas: calculateTabOrder, compareDOMOrder, getAccessibleName
+  dom-utils.js         - Funciones compartidas: calculateTabOrder, compareDOMOrder, getAccessibleName, deepQuerySelectorAll (shadow DOM), resolveDeepSelector
   logger.js            - Logger condicional (debug silenciado en producción)
   i18n.js              - Internacionalización (es/en)
   text-reader.js       - Lector TTS con detección de idioma y navegación de contenido
@@ -35,6 +35,7 @@ tests/
   setup.js             - Mocks de Chrome API y CSS.escape para jsdom
   dom-utils.test.js    - Tests de calculateTabOrder, compareDOMOrder, getAccessibleName
   a11y-checker.test.js - Tests de parseColor, rgbToLuminance, calculateContrast
+  shadow-dom.test.js   - Tests de traversal shadow DOM, selectores >>> y heurística de shadow cerrado
 icons/                 - Iconos en 16/48/128px (PNG + SVG)
 package.json           - Scripts: test, build, lint, package
 eslint.config.js       - ESLint flat config para Chrome extensions
@@ -76,6 +77,9 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - Toda cadena visible al usuario usa `i18n.t()` — sin strings hardcodeados
 - Parámetro de catch sin uso se nombra `_` (ESLint lo ignora vía `caughtErrorsIgnorePattern`)
 - `npm run lint` debe quedar en 0 errores y 0 warnings antes de cualquier commit
+- El validador traversa shadow DOM **abierto**: `check()` recolecta roots una vez (`collectShadowRoots`) y los checks consultan con `deepQuerySelectorAll`
+- Selectores cross-shadow usan segmentos ` >>> ` (generados por `getElementSelector`, resueltos por `resolveDeepSelector` en el highlight)
+- Shadow roots cerrados no son analizables: se emite un único resultado `info` (`closedShadow`) con recuento heurístico
 
 ## Storage Keys (`chrome.storage.local`)
 - `language` — Idioma de la interfaz (`es` | `en`)
