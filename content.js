@@ -10,6 +10,7 @@ if (window.a11yGoContentScriptLoaded) {
   let keyboardNav = null;
   let visualNav = null;
   let a11yChecker = null;
+  let resolveDeepSelector = null;
   let logger = { log() {}, warn: console.warn.bind(console), error: console.error.bind(console) };
 
   // Promesa que se resuelve cuando los módulos están cargados
@@ -33,6 +34,8 @@ if (window.a11yGoContentScriptLoaded) {
       const { KeyboardNav } = await import(chrome.runtime.getURL('utils/keyboard-nav.js'));
       const { VisualNav } = await import(chrome.runtime.getURL('utils/visual-nav.js'));
       const { A11yChecker } = await import(chrome.runtime.getURL('utils/a11y-checker.js'));
+      const domUtilsModule = await import(chrome.runtime.getURL('utils/dom-utils.js'));
+      resolveDeepSelector = domUtilsModule.resolveDeepSelector;
 
       textReader = new TextReader();
       keyboardNav = new KeyboardNav();
@@ -398,7 +401,9 @@ if (window.a11yGoContentScriptLoaded) {
 
       removeCurrentOverlay();
 
-      const element = document.querySelector(selector);
+      const element = resolveDeepSelector
+        ? resolveDeepSelector(selector)
+        : document.querySelector(selector);
       if (!element || !(element instanceof Element)) {
         logger.warn('Highlight: Elemento no encontrado:', selector);
         return;
@@ -418,7 +423,7 @@ if (window.a11yGoContentScriptLoaded) {
         element.style.visibility = 'visible';
         element.style.opacity = '1';
         restoreHidden = () => {
-          if (document.contains(element)) {
+          if (element.isConnected) {
             element.style.display = orig.display;
             element.style.visibility = orig.visibility;
             element.style.opacity = orig.opacity;
@@ -432,14 +437,14 @@ if (window.a11yGoContentScriptLoaded) {
       // Esperar a que el scroll suave se asiente (~600ms) antes de posicionar el overlay
       setTimeout(() => {
         try {
-          if (!document.contains(element)) return;
+          if (!element.isConnected) return;
 
           currentErrorOverlay = buildOverlay(element, severity || 'error');
           if (!currentErrorOverlay) return;
 
           // Actualizar posición del overlay al hacer scroll (el elemento se mueve con la página)
           currentScrollHandler = () => {
-            if (!currentErrorOverlay || !document.contains(element)) return;
+            if (!currentErrorOverlay || !element.isConnected) return;
             const r = element.getBoundingClientRect();
             const PAD = 6;
             currentErrorOverlay.style.top  = `${r.top - PAD}px`;
