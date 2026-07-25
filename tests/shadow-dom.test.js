@@ -261,3 +261,63 @@ describe('getElementSelector con shadow DOM', () => {
     expect(resolveDeepSelector(sel)).toBe(target);
   });
 });
+
+// Mock de tamaño renderizado (jsdom no calcula layout)
+function mockSize(el, width = 100, height = 40) {
+  el.getBoundingClientRect = () => ({
+    width, height, top: 0, left: 0, right: width, bottom: height, x: 0, y: 0
+  });
+}
+
+describe('detección de shadow DOM cerrado (heurística)', () => {
+  it('emite un único resultado info con el recuento', async () => {
+    const w1 = document.createElement('my-widget');
+    mockSize(w1);
+    document.body.appendChild(w1);
+    const w2 = document.createElement('other-widget');
+    mockSize(w2);
+    document.body.appendChild(w2);
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('images'));
+
+    const closed = results.filter(r => r.code === 'closedShadow');
+    expect(closed.length).toBe(1);
+    expect(closed[0].severity).toBe('info');
+    expect(closed[0].description).toContain('2');
+  });
+
+  it('no se emite para custom elements con shadow root abierto', async () => {
+    const host = document.createElement('open-widget');
+    document.body.appendChild(host);
+    host.attachShadow({ mode: 'open' });
+    mockSize(host);
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('images'));
+
+    expect(results.some(r => r.code === 'closedShadow')).toBe(false);
+  });
+
+  it('no se emite para custom elements con hijos en el DOM ligero', async () => {
+    const el = document.createElement('light-widget');
+    el.innerHTML = '<p>contenido visible</p>';
+    mockSize(el);
+    document.body.appendChild(el);
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('images'));
+
+    expect(results.some(r => r.code === 'closedShadow')).toBe(false);
+  });
+
+  it('no se emite para elementos sin tamaño renderizado', async () => {
+    const el = document.createElement('empty-widget');
+    document.body.appendChild(el); // jsdom: rect a 0 por defecto
+
+    const checker = new A11yChecker();
+    const results = await checker.check(onlyCategory('images'));
+
+    expect(results.some(r => r.code === 'closedShadow')).toBe(false);
+  });
+});

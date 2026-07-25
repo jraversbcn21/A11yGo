@@ -81,7 +81,8 @@ const translations = {
     emptyLink: 'Enlace sin texto',
     notFocusable: 'Elemento no accesible por teclado',
     missingRole: 'Falta atributo ARIA role',
-    invalidAria: 'Atributo ARIA inválido'
+    invalidAria: 'Atributo ARIA inválido',
+    closedShadow: 'Shadow DOM cerrado'
   },
   en: {
     // General
@@ -163,7 +164,8 @@ const translations = {
     emptyLink: 'Link without text',
     notFocusable: 'Element not keyboard accessible',
     missingRole: 'Missing ARIA role attribute',
-    invalidAria: 'Invalid ARIA attribute'
+    invalidAria: 'Invalid ARIA attribute',
+    closedShadow: 'Closed shadow DOM'
   }
 };
 

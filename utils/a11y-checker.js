@@ -74,6 +74,8 @@ export class A11yChecker {
         logger.log(`A11yChecker: ${this._shadowRoots.length} shadow root(s) abiertos detectados`);
       }
 
+      this.detectClosedShadowComponents();
+
       if (enabled('images')) {
         this.checkImages();
         logger.log('A11yChecker: ✓ Imágenes validadas');
@@ -635,7 +637,33 @@ export class A11yChecker {
       logger.error('A11yChecker: Error en checkTabOrder:', error);
     }
   }
-  
+
+  // Heurística: custom elements que probablemente ocultan un shadow root cerrado.
+  // No hay API para distinguir "shadow cerrado" de "sin shadow"; se aproxima con:
+  // tag con guion + sin shadowRoot accesible + sin hijos en el DOM ligero + tamaño renderizado > 0.
+  detectClosedShadowComponents() {
+    try {
+      const candidates = deepQuerySelectorAll('*', this._shadowRoots).filter(el => {
+        try {
+          if (!el.tagName || !el.tagName.includes('-')) return false;
+          if (el.shadowRoot) return false;
+          if (el.childElementCount > 0) return false;
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        } catch (_) {
+          return false;
+        }
+      });
+
+      if (candidates.length > 0) {
+        this.addResult('info', 'closedShadow',
+          `${candidates.length} componente(s) posiblemente con shadow DOM cerrado — su contenido no pudo ser auditado`);
+      }
+    } catch (error) {
+      logger.error('A11yChecker: Error en detectClosedShadowComponents:', error);
+    }
+  }
+
   getTextElements() {
     const textElements = [];
     const processed = new Set();
@@ -887,7 +915,8 @@ export class A11yChecker {
       excessiveTabIndex: 'Uso excesivo de tabindex',
       mixedTabOrder: 'Orden de tabulación mezclado',
       gradientContrast: 'Contraste sobre gradiente',
-      bgImageContrast: 'Texto sobre imagen de fondo'
+      bgImageContrast: 'Texto sobre imagen de fondo',
+      closedShadow: 'Shadow DOM cerrado'
     };
     
     return titles[code] || code;
