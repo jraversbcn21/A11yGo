@@ -130,3 +130,62 @@ export function getAccessibleName(element) {
 
   return '';
 }
+
+/**
+ * Recolecta recursivamente los shadow roots abiertos del árbol,
+ * en orden de documento (host antes que su contenido).
+ * Límite de profundidad defensivo para árboles patológicos.
+ */
+export function collectShadowRoots(root = document, maxDepth = 20) {
+  const roots = [];
+
+  const visit = (node, depth) => {
+    if (depth >= maxDepth) return;
+    let elements;
+    try {
+      elements = node.querySelectorAll('*');
+    } catch (_) {
+      return;
+    }
+    for (const el of elements) {
+      if (el.shadowRoot) {
+        roots.push(el.shadowRoot);
+        visit(el.shadowRoot, depth + 1);
+      }
+    }
+  };
+
+  try {
+    visit(root, 0);
+  } catch (_) {
+    // Devolver lo recopilado hasta el fallo
+  }
+
+  return roots;
+}
+
+/**
+ * querySelectorAll que penetra shadow roots abiertos.
+ * Devuelve array (no NodeList): documento primero, luego cada shadow root.
+ * `roots` permite pasar una lista pre-calculada y evitar re-recorridos.
+ */
+export function deepQuerySelectorAll(selector, roots = null) {
+  const shadowRoots = roots || collectShadowRoots();
+  const results = [];
+
+  try {
+    results.push(...document.querySelectorAll(selector));
+  } catch (_) {
+    return results;
+  }
+
+  for (const root of shadowRoots) {
+    try {
+      results.push(...root.querySelectorAll(selector));
+    } catch (_) {
+      // Root inválido o selector no soportado en este contexto: continuar
+    }
+  }
+
+  return results;
+}
