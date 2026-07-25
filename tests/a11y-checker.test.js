@@ -6,6 +6,11 @@ describe('A11yChecker - color utilities', () => {
 
   beforeEach(() => {
     checker = new A11yChecker();
+    // checkContrast() ahora depende del estado por-documento que normalmente
+    // inicializa check() en su bucle de contextos; los tests de este archivo
+    // invocan checkContrast() de forma aislada, así que lo replicamos aquí.
+    checker._currentDoc = document;
+    checker._contrastBudget = 100;
   });
 
   // Reemplaza window.getComputedStyle por un stub con defaults; fn(el) sobreescribe campos.

@@ -1,12 +1,16 @@
 // Motor de validación de accesibilidad
 import { logger } from './logger.js';
-import { compareDOMOrder, collectShadowRoots, deepQuerySelectorAll } from './dom-utils.js';
+import { compareDOMOrder, collectShadowRoots, deepQuerySelectorAll, collectFrameContexts } from './dom-utils.js';
 
 export class A11yChecker {
   constructor() {
     this.results = [];
     this.isActive = false;
     this._shadowRoots = null;
+    this._currentDoc = null;
+    this._framePath = null;
+    this._contrastBudget = 0;
+    this._crossOriginCount = 0;
   }
 
   activate() {
@@ -69,57 +73,29 @@ export class A11yChecker {
     logger.log('A11yChecker: Iniciando validación...');
 
     try {
-      this._shadowRoots = collectShadowRoots();
-      if (this._shadowRoots.length > 0) {
-        logger.log(`A11yChecker: ${this._shadowRoots.length} shadow root(s) abiertos detectados`);
-      }
+      const frameData = collectFrameContexts(document);
+      const contexts = frameData.contexts;
+      this._crossOriginCount = frameData.crossOriginCount;
+      this._contrastBudget = 100;
 
-      this.detectClosedShadowComponents();
+      for (const ctx of contexts) {
+        this._currentDoc = ctx.doc;
+        this._framePath = ctx.framePath;
+        this._shadowRoots = collectShadowRoots(ctx.doc);
 
-      if (enabled('images')) {
-        this.checkImages();
-        logger.log('A11yChecker: ✓ Imágenes validadas');
-      }
+        this.detectClosedShadowComponents();
 
-      if (enabled('contrast')) {
-        this.checkContrast();
-        logger.log('A11yChecker: ✓ Contraste validado');
+        if (enabled('images')) this.checkImages();
+        if (enabled('contrast')) this.checkContrast();
+        if (enabled('forms')) this.checkFormLabels();
+        if (enabled('headings')) this.checkHeadings();
+        if (enabled('landmarks')) this.checkLandmarks();
+        if (enabled('links')) this.checkLinks();
+        if (enabled('aria')) this.checkARIA();
+        if (enabled('keyboard')) this.checkKeyboardAccess();
+        if (enabled('tabOrder')) this.checkTabOrder();
       }
-
-      if (enabled('forms')) {
-        this.checkFormLabels();
-        logger.log('A11yChecker: ✓ Formularios validados');
-      }
-
-      if (enabled('headings')) {
-        this.checkHeadings();
-        logger.log('A11yChecker: ✓ Encabezados validados');
-      }
-
-      if (enabled('landmarks')) {
-        this.checkLandmarks();
-        logger.log('A11yChecker: ✓ Landmarks validados');
-      }
-
-      if (enabled('links')) {
-        this.checkLinks();
-        logger.log('A11yChecker: ✓ Enlaces validados');
-      }
-
-      if (enabled('aria')) {
-        this.checkARIA();
-        logger.log('A11yChecker: ✓ ARIA validado');
-      }
-
-      if (enabled('keyboard')) {
-        this.checkKeyboardAccess();
-        logger.log('A11yChecker: ✓ Accesibilidad de teclado validada');
-      }
-
-      if (enabled('tabOrder')) {
-        this.checkTabOrder();
-        logger.log('A11yChecker: ✓ Orden de tabulación validado');
-      }
+      logger.log(`A11yChecker: Validación por-documento completada (${contexts.length} documento(s))`);
 
       logger.log(`A11yChecker: Validación completada. Total de problemas: ${this.results.length}`);
       logger.log('A11yChecker: Desglose - Errores:', this.results.filter(r => r.severity === 'error').length, 
@@ -131,14 +107,18 @@ export class A11yChecker {
       logger.error('A11yChecker: Error durante validación:', error);
       return this.results; // Devolver lo que se haya recopilado hasta ahora
     } finally {
-      // El DOM cambia entre validaciones: no cachear roots entre ejecuciones
+      // El DOM cambia entre validaciones: no cachear estado entre ejecuciones
       this._shadowRoots = null;
+      this._currentDoc = null;
+      this._framePath = null;
+      this._contrastBudget = 0;
+      this._crossOriginCount = 0;
     }
   }
 
   checkImages() {
     try {
-      const images = deepQuerySelectorAll('img', this._shadowRoots);
+      const images = deepQuerySelectorAll('img', this._shadowRoots, this._currentDoc);
       logger.log(`A11yChecker: Verificando ${images.length} imágenes`);
       
       images.forEach(img => {
@@ -166,12 +146,12 @@ export class A11yChecker {
     
     logger.log(`A11yChecker: Verificando contraste en ${textElements.length} elementos`);
     
-    // Limitar el número de elementos a verificar para evitar que se cuelgue
-    const maxElements = 100;
-    const elementsToCheck = textElements.slice(0, maxElements);
-    
-    if (textElements.length > maxElements) {
-      logger.warn(`A11yChecker: Limitando verificación de contraste a ${maxElements} elementos de ${textElements.length}`);
+    // Presupuesto global acumulado entre documentos (top + iframes)
+    const elementsToCheck = textElements.slice(0, Math.max(0, this._contrastBudget));
+    this._contrastBudget -= elementsToCheck.length;
+
+    if (textElements.length > elementsToCheck.length) {
+      logger.warn(`A11yChecker: Limitando verificación de contraste (presupuesto global agotado; ${elementsToCheck.length} de ${textElements.length} en este documento)`);
     }
     
     elementsToCheck.forEach((element, index) => {
@@ -268,7 +248,7 @@ export class A11yChecker {
 
   checkFormLabels() {
     try {
-      const inputs = deepQuerySelectorAll('input, select, textarea', this._shadowRoots);
+      const inputs = deepQuerySelectorAll('input, select, textarea', this._shadowRoots, this._currentDoc);
       logger.log(`A11yChecker: Verificando ${inputs.length} campos de formulario`);
       
       inputs.forEach(input => {
@@ -321,7 +301,7 @@ export class A11yChecker {
 
   checkHeadings() {
     try {
-      const headings = deepQuerySelectorAll('h1, h2, h3, h4, h5, h6', this._shadowRoots)
+      const headings = deepQuerySelectorAll('h1, h2, h3, h4, h5, h6', this._shadowRoots, this._currentDoc)
         .filter(h => {
           try {
             const style = this.getStyle(h);
@@ -387,7 +367,7 @@ export class A11yChecker {
 
       const foundLandmarks = landmarks.some(selector => {
         try {
-          return deepQuerySelectorAll(selector, this._shadowRoots).length > 0;
+          return deepQuerySelectorAll(selector, this._shadowRoots, this._currentDoc).length > 0;
         } catch (_) {
           return false;
         }
@@ -398,7 +378,7 @@ export class A11yChecker {
       }
 
       // Verificar múltiples mains
-      const mains = deepQuerySelectorAll('main, [role="main"]', this._shadowRoots);
+      const mains = deepQuerySelectorAll('main, [role="main"]', this._shadowRoots, this._currentDoc);
       if (mains.length > 1) {
         this.addResult('error', 'multipleMains', 'Múltiples elementos main encontrados', mains[1]);
       }
@@ -411,7 +391,7 @@ export class A11yChecker {
 
   checkLinks() {
     try {
-      const links = deepQuerySelectorAll('a[href]', this._shadowRoots);
+      const links = deepQuerySelectorAll('a[href]', this._shadowRoots, this._currentDoc);
       logger.log(`A11yChecker: Verificando ${links.length} enlaces`);
       
       links.forEach(link => {
@@ -442,7 +422,7 @@ export class A11yChecker {
       logger.log('A11yChecker: Iniciando checkARIA...');
       
       // Verificar elementos con role pero sin label
-      const elementsWithRole = deepQuerySelectorAll('[role]', this._shadowRoots);
+      const elementsWithRole = deepQuerySelectorAll('[role]', this._shadowRoots, this._currentDoc);
       logger.log(`A11yChecker: Verificando ${elementsWithRole.length} elementos con role`);
       
       let roleCount = 0;
@@ -472,7 +452,8 @@ export class A11yChecker {
       
       const elementsWithAria = deepQuerySelectorAll(
         '[aria-hidden], [aria-expanded], [aria-selected], [aria-checked], [aria-readonly], [aria-required], [aria-label], [aria-labelledby]',
-        this._shadowRoots
+        this._shadowRoots,
+        this._currentDoc
       );
       
       logger.log(`A11yChecker: Verificando ${elementsWithAria.length} elementos con atributos ARIA`);
@@ -518,7 +499,8 @@ export class A11yChecker {
     try {
       const interactiveElements = deepQuerySelectorAll(
         'a, button, input, select, textarea, [tabindex], [role="button"], [role="link"], [role="menuitem"], [role="tab"]',
-        this._shadowRoots
+        this._shadowRoots,
+        this._currentDoc
       );
       
       interactiveElements.forEach(element => {
@@ -558,7 +540,7 @@ export class A11yChecker {
         '[contenteditable="true"]'
       ].join(', ');
       
-      const allElements = deepQuerySelectorAll(selectors, this._shadowRoots);
+      const allElements = deepQuerySelectorAll(selectors, this._shadowRoots, this._currentDoc);
       const focusableElements = allElements.filter(el => {
         const tabIndex = el.getAttribute('tabindex');
         if (tabIndex === '-1') return false;
@@ -665,7 +647,7 @@ export class A11yChecker {
   // tag con guion + sin shadowRoot accesible + sin hijos en el DOM ligero + tamaño renderizado > 0.
   detectClosedShadowComponents() {
     try {
-      const candidates = deepQuerySelectorAll('*', this._shadowRoots).filter(el => {
+      const candidates = deepQuerySelectorAll('*', this._shadowRoots, this._currentDoc).filter(el => {
         try {
           if (!el.tagName || !el.tagName.includes('-')) return false;
           if (el.shadowRoot) return false;
@@ -694,7 +676,7 @@ export class A11yChecker {
     const selectors = 'p, h1, h2, h3, h4, h5, h6, a, button, span, div, li, td, th, label, legend';
     
     try {
-      const elements = deepQuerySelectorAll(selectors, this._shadowRoots);
+      const elements = deepQuerySelectorAll(selectors, this._shadowRoots, this._currentDoc);
 
       elements.forEach(el => {
         if (processed.has(el)) return;
@@ -998,7 +980,7 @@ export class A11yChecker {
     const path = [];
     let el = element;
 
-    while (el && el !== document.documentElement && el !== root) {
+    while (el && el !== element.ownerDocument.documentElement && el !== root) {
       // Si encontramos un ancestro con ID, usarlo como ancla y parar
       if (el.id && /^[a-zA-Z][\w-]*$/.test(el.id)) {
         path.unshift(`#${CSS.escape(el.id)}`);
