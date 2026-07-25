@@ -245,25 +245,49 @@ export function deepQuerySelectorAll(selector, roots = null, baseDoc = document)
 }
 
 /**
- * Resuelve un selector con segmentos ` >>> ` (fronteras de shadow DOM)
- * saltando de host en host. Devuelve el elemento o null si algún salto falla.
+ * Resuelve un selector que puede cruzar fronteras de shadow DOM ( >>> ) y de
+ * iframe same-origin ( ::iframe:: ). Devuelve el elemento o null si algún salto falla.
  */
 export function resolveDeepSelector(selector) {
   if (!selector || typeof selector !== 'string') return null;
 
-  const segments = selector.split(' >>> ');
-  let context = document;
+  // Resuelve un selector shadow-aware ( >>> ) dentro de un contexto (Document/ShadowRoot)
+  const resolveInContext = (sel, startContext) => {
+    const segments = sel.split(' >>> ');
+    let context = startContext;
+    let element = null;
+    for (const segment of segments) {
+      if (!context || typeof context.querySelector !== 'function') return null;
+      try {
+        element = context.querySelector(segment);
+      } catch (_) {
+        return null;
+      }
+      if (!element) return null;
+      context = element.shadowRoot;
+    }
+    return element;
+  };
+
+  const frameSegments = selector.split(' ::iframe:: ');
+  let doc = document;
   let element = null;
 
-  for (const segment of segments) {
-    if (!context || typeof context.querySelector !== 'function') return null;
-    try {
-      element = context.querySelector(segment);
-    } catch (_) {
-      return null;
-    }
+  for (let i = 0; i < frameSegments.length; i++) {
+    element = resolveInContext(frameSegments[i], doc);
     if (!element) return null;
-    context = element.shadowRoot;
+
+    // Si no es el último segmento, el elemento resuelto debe ser un iframe: descender
+    if (i < frameSegments.length - 1) {
+      let childDoc = null;
+      try {
+        childDoc = element.contentDocument;
+      } catch (_) {
+        childDoc = null;
+      }
+      if (!childDoc) return null;
+      doc = childDoc;
+    }
   }
 
   return element;

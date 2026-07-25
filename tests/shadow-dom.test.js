@@ -137,6 +137,36 @@ describe('resolveDeepSelector', () => {
     expect(resolveDeepSelector('')).toBeNull();
     expect(resolveDeepSelector(null)).toBeNull();
   });
+
+  describe('resolveDeepSelector cruzando iframes', () => {
+    it('resuelve un elemento dentro de un iframe same-origin', () => {
+      const iframe = document.createElement('iframe');
+      iframe.id = 'fr';
+      document.body.appendChild(iframe);
+      iframe.contentDocument.body.innerHTML = '<button id="b">x</button>';
+
+      const el = resolveDeepSelector('#fr ::iframe:: #b');
+      expect(el).toBe(iframe.contentDocument.getElementById('b'));
+
+      iframe.remove();
+    });
+
+    it('devuelve null si el iframe no es accesible', () => {
+      const iframe = document.createElement('iframe');
+      iframe.id = 'fr2';
+      document.body.appendChild(iframe);
+      Object.defineProperty(iframe, 'contentDocument', { get: () => null, configurable: true });
+
+      expect(resolveDeepSelector('#fr2 ::iframe:: #b')).toBeNull();
+
+      iframe.remove();
+    });
+
+    it('sigue resolviendo selectores sin ::iframe:: (retrocompatible)', () => {
+      document.body.innerHTML = '<button id="plain">y</button>';
+      expect(resolveDeepSelector('#plain')).toBe(document.getElementById('plain'));
+    });
+  });
 });
 
 describe('compareDOMOrder con shadow DOM', () => {
