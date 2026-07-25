@@ -351,9 +351,31 @@ if (window.a11yGoContentScriptLoaded) {
     currentErrorOverlay = null;
   }
 
+  // Suma el offset de los iframes contenedores (same-origin) hasta el top.
+  // Exacto a un nivel de anidamiento; best-effort para iframes anidados.
+  function getFrameOffset(element) {
+    let offsetTop = 0;
+    let offsetLeft = 0;
+    let view = element.ownerDocument && element.ownerDocument.defaultView;
+    while (view && view.frameElement) {
+      try {
+        const r = view.frameElement.getBoundingClientRect();
+        offsetTop += r.top;
+        offsetLeft += r.left;
+      } catch (_) {
+        break;
+      }
+      view = view.frameElement.ownerDocument && view.frameElement.ownerDocument.defaultView;
+    }
+    return { top: offsetTop, left: offsetLeft };
+  }
+
   function buildOverlay(element, severity) {
     const rect = element.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) return;
+    const fo = getFrameOffset(element);
+    const rectTop = rect.top + fo.top;
+    const rectLeft = rect.left + fo.left;
 
     const PAD = 6;
     const overlay = document.createElement('div');
@@ -369,8 +391,8 @@ if (window.a11yGoContentScriptLoaded) {
 
     overlay.style.cssText = `
       position: fixed;
-      top: ${rect.top - PAD}px;
-      left: ${rect.left - PAD}px;
+      top: ${rectTop - PAD}px;
+      left: ${rectLeft - PAD}px;
       width: ${Math.max(rect.width + PAD * 2, 30)}px;
       height: ${Math.max(rect.height + PAD * 2, 30)}px;
       border: 4px solid ${c.border};
@@ -434,6 +456,14 @@ if (window.a11yGoContentScriptLoaded) {
       // Scroll suave al elemento
       try { element.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
 
+      // Si el elemento está dentro de un iframe, además hacer scroll de la página al iframe contenedor
+      try {
+        const view = element.ownerDocument && element.ownerDocument.defaultView;
+        if (view && view.frameElement) {
+          view.frameElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch (_) {}
+
       // Esperar a que el scroll suave se asiente (~600ms) antes de posicionar el overlay
       setTimeout(() => {
         try {
@@ -446,9 +476,12 @@ if (window.a11yGoContentScriptLoaded) {
           currentScrollHandler = () => {
             if (!currentErrorOverlay || !element.isConnected) return;
             const r = element.getBoundingClientRect();
+            const fo = getFrameOffset(element);
+            const top = r.top + fo.top;
+            const left = r.left + fo.left;
             const PAD = 6;
-            currentErrorOverlay.style.top  = `${r.top - PAD}px`;
-            currentErrorOverlay.style.left = `${r.left - PAD}px`;
+            currentErrorOverlay.style.top  = `${top - PAD}px`;
+            currentErrorOverlay.style.left = `${left - PAD}px`;
             currentErrorOverlay.style.width  = `${Math.max(r.width + PAD * 2, 30)}px`;
             currentErrorOverlay.style.height = `${Math.max(r.height + PAD * 2, 30)}px`;
           };

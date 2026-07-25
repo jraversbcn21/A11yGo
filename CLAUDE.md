@@ -24,7 +24,7 @@ sidebar.html/js/css    - Panel lateral con controles, resultados, config de cate
 content.js             - Orquestador: carga módulos, gestiona activación/desactivación
 background.js          - Service worker (type: module): routing de mensajes, reinyección en SPAs
 utils/
-  dom-utils.js         - Funciones compartidas: calculateTabOrder, compareDOMOrder, getAccessibleName, deepQuerySelectorAll (shadow DOM), resolveDeepSelector
+  dom-utils.js         - Funciones compartidas: calculateTabOrder, compareDOMOrder, getAccessibleName, deepQuerySelectorAll (shadow DOM + baseDoc), resolveDeepSelector ( >>> shadow, ::iframe:: frames), collectFrameContexts
   logger.js            - Logger condicional (debug silenciado en producción)
   i18n.js              - Internacionalización (es/en)
   text-reader.js       - Lector TTS con detección de idioma y navegación de contenido
@@ -36,6 +36,7 @@ tests/
   dom-utils.test.js    - Tests de calculateTabOrder, compareDOMOrder, getAccessibleName
   a11y-checker.test.js - Tests de parseColor, rgbToLuminance, calculateContrast
   shadow-dom.test.js   - Tests de traversal shadow DOM, selectores >>> y heurística de shadow cerrado
+  iframe.test.js       - Tests de collectFrameContexts, selectores ::iframe:: y auditoría por-documento
 icons/                 - Iconos en 16/48/128px (PNG + SVG)
 package.json           - Scripts: test, build, lint, package
 eslint.config.js       - ESLint flat config para Chrome extensions
@@ -81,6 +82,10 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - El validador traversa shadow DOM **abierto**: `check()` recolecta roots una vez (`collectShadowRoots`) y los checks consultan con `deepQuerySelectorAll`
 - Selectores cross-shadow usan segmentos ` >>> ` (generados por `getElementSelector`, resueltos por `resolveDeepSelector` en el highlight)
 - Shadow roots cerrados no son analizables: se emite un único resultado `info` (`closedShadow`) con recuento heurístico
+- El validador audita iframes **same-origin**: `check()` corre por-documento (`collectFrameContexts` enumera `contentDocument` accesibles); cada documento evalúa su propia estructura (encabezados/landmarks) sin falsos positivos
+- Iframes **cross-origin** no son auditables: se emite un único resultado `info` (`crossOriginIframe`) con recuento
+- Selectores cross-frame usan ` ::iframe:: ` (además del ` >>> ` de shadow); el highlight compone el offset de los iframes contenedores
+- Estilos computados se obtienen con `getStyle(el)` (ventana dueña del elemento), no `window.getComputedStyle`, para funcionar en iframes
 
 ## Storage Keys (`chrome.storage.local`)
 - `language` — Idioma de la interfaz (`es` | `en`)
