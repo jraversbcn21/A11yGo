@@ -37,6 +37,7 @@ tests/
   a11y-checker.test.js - Tests de parseColor, rgbToLuminance, calculateContrast
   shadow-dom.test.js   - Tests de traversal shadow DOM, selectores >>> y heurística de shadow cerrado
   iframe.test.js       - Tests de collectFrameContexts, selectores ::iframe:: y auditoría por-documento
+test-fixtures/         - Páginas HTML para verificación manual en navegador (shadow DOM + iframes); ver test-fixtures/README.md
 icons/                 - Iconos en 16/48/128px (PNG + SVG)
 package.json           - Scripts: test, build, lint, package
 eslint.config.js       - ESLint flat config para Chrome extensions

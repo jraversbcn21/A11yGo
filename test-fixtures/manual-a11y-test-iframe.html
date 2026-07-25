@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Contenido embebido same-origin</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 14px; margin: 0; }
+    h1 { font-size: 1.1rem; }
+    .box { border: 1px solid #ddd; border-radius: 6px; padding: 10px; margin-top: 8px; }
+    img { border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <!-- Landmark propio del iframe (evita missingLandmark por-documento) -->
+  <main>
+    <h1>Encabezado propio del iframe</h1>
+    <p>Imagen sin alt dentro del iframe:</p>
+    <!-- Imagen azul SIN alt → noAltText con selector ::iframe:: -->
+    <img id="iframe-img" width="100" height="60"
+         src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='60'><rect width='100' height='60' fill='%234a90d9'/></svg>">
+    <div id="iframe-shadow-host" class="box">host de shadow DENTRO del iframe →</div>
+  </main>
+
+  <script>
+    // Se ejecuta durante el parseo (síncrono): el shadow existe antes de que
+    // dispare 'load', así que no hay carrera con la validación.
+    (function () {
+      const host = document.getElementById('iframe-shadow-host');
+      const root = host.attachShadow({ mode: 'open' });
+      const img = document.createElement('img');
+      img.width = 80; img.height = 50;
+      // Imagen roja SIN alt → noAltText con selector combinado ::iframe:: … >>>
+      img.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='50'><rect width='80' height='50' fill='%23c0392b'/></svg>";
+      root.appendChild(img);
+    })();
+  </script>
+</body>
+</html>

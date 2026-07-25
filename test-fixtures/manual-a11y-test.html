@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A11yGo — Fixture de verificación manual (shadow DOM + iframes)</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      max-width: 820px; margin: 0 auto; padding: 24px 20px 140px;
+      line-height: 1.5; color: #1a1a1a; background: #fafafa;
+    }
+    header { border-bottom: 2px solid #333; margin-bottom: 8px; }
+    h1 { font-size: 1.5rem; }
+    .card {
+      border: 1px solid #d0d0d0; border-radius: 10px; padding: 18px 20px;
+      margin: 28px 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .card h2 { margin-top: 0; font-size: 1.15rem; }
+    .tag {
+      display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+      text-transform: uppercase; padding: 2px 8px; border-radius: 999px;
+      background: #e8eefc; color: #1b4bd8; vertical-align: middle; margin-left: 6px;
+    }
+    .expect {
+      margin-top: 12px; padding: 10px 12px; background: #f2f7f2;
+      border-left: 4px solid #3a8a3a; font-size: .9rem; border-radius: 4px;
+    }
+    .expect strong { color: #256025; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    iframe { width: 100%; border: 1px dashed #bbb; border-radius: 6px; }
+    .spacer { height: 340px; display: flex; align-items: center; justify-content: center; color: #595959; font-style: italic; }
+    .demo-box { padding: 14px; border: 1px solid #eee; border-radius: 6px; margin-top: 10px; background: #fcfcfc; }
+    ol.steps { background: #fff8e6; border: 1px solid #f0d68a; border-radius: 8px; padding: 14px 18px 14px 36px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>A11yGo — Fixture de verificación manual</h1>
+    <p>Shadow DOM (#1) e iframes same-origin (#3): traversal, avisos y <em>highlight</em> frame/shadow-aware.</p>
+  </header>
+
+  <main>
+  <ol class="steps">
+    <li>Carga A11yGo sin empaquetar en <code>chrome://extensions/</code> (modo desarrollador) apuntando a la <strong>raíz del repo</strong> — NO a <code>dist/</code> (es una build congelada).</li>
+    <li>Sirve el repo por HTTP (p. ej. <code>npx http-server -p 8080 -c-1</code>) y abre <code>http://localhost:8080/test-fixtures/manual-a11y-test.html</code>. <strong>No uses <code>file://</code></strong>: Chrome trata cada URL <code>file:</code> como origen único y el iframe no carga.</li>
+    <li>Con la extensión activa, ejecuta <strong>Validar Accesibilidad</strong>. Tras cualquier cambio, recarga con <strong>Ctrl+Shift+R</strong> (recarga dura).</li>
+    <li>Verifica en el panel lateral que aparecen los problemas de cada tarjeta y que, al hacer <strong>click</strong> en cada uno, la página hace scroll y el <strong>overlay pulse</strong> se posiciona sobre el elemento correcto (incluido dentro del shadow root y del iframe).</li>
+  </ol>
+
+  <!-- A ------------------------------------------------------------ -->
+  <div class="card">
+    <h2>A. Baseline (documento principal) <span class="tag">sanity</span></h2>
+    <p>Imagen sin <code>alt</code> en el documento top — confirma que el flujo básico y el highlight normal siguen funcionando.</p>
+    <div class="demo-box">
+      <img id="top-img" width="120" height="70"
+           src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='70'><rect width='120' height='70' fill='%23cc9944'/></svg>">
+    </div>
+    <div class="expect"><strong>Esperado:</strong> un resultado <code>noAltText</code>. Al hacer click, el overlay cae sobre la imagen naranja de arriba.</div>
+  </div>
+
+  <div class="spacer">— espacio para que el scroll al elemento sea observable —</div>
+
+  <!-- B ------------------------------------------------------------ -->
+  <div class="card">
+    <h2>B. Shadow DOM abierto (#1) <span class="tag">shadow</span></h2>
+    <p>Un host con <code>shadowRoot</code> abierto que contiene una imagen sin <code>alt</code> y un campo de formulario sin etiqueta. El validador debe <em>penetrar</em> el shadow root.</p>
+    <div id="shadow-host-b" class="demo-box"></div>
+    <div class="expect"><strong>Esperado:</strong> problemas <em>dentro</em> del shadow: <code>noAltText</code> (imagen morada) y <code>placeholderAsLabel</code>/<code>missingLabel</code> (el campo de texto), con selector interno que incluye <code>&gt;&gt;&gt;</code>. Al hacer click, el overlay se posiciona sobre el elemento dentro del shadow root.</div>
+  </div>
+
+  <div class="spacer">— más espacio —</div>
+
+  <!-- C ------------------------------------------------------------ -->
+  <div class="card">
+    <h2>C. Iframe same-origin (#3) <span class="tag">iframe</span></h2>
+    <p>Iframe de mismo origen (archivo aparte servido desde <code>localhost</code>) con su propia estructura: un <code>&lt;h1&gt;</code> propio, una imagen sin <code>alt</code>, y — anidado — un shadow host con otra imagen sin <code>alt</code> (caso combinado <code>::iframe:: … &gt;&gt;&gt;</code>).</p>
+    <iframe id="frame-same" height="240" title="Contenido embebido same-origin" src="manual-a11y-test-iframe.html"></iframe>
+    <div class="expect"><strong>Esperado:</strong> (1) <code>noAltText</code> para la imagen azul del iframe — selector con <code>::iframe::</code>. (2) <code>noAltText</code> para la imagen roja del shadow dentro del iframe — selector con <code>::iframe:: … &gt;&gt;&gt;</code>. (3) <strong>NO</strong> debe aparecer <code>invalidHeadingOrder</code> por el <code>&lt;h1&gt;</code> del iframe conviviendo con el de la página (evaluación por-documento). Al hacer click en cada uno, el overlay cae sobre el elemento <em>dentro</em> del iframe, bien posicionado.</div>
+  </div>
+
+  <div class="spacer">— más espacio —</div>
+
+  <!-- D ------------------------------------------------------------ -->
+  <div class="card">
+    <h2>D. Iframe cross-origin <span class="tag">cross-origin</span></h2>
+    <p>Iframe apuntando a otro origen (<code>example.com</code>). Su contenido <strong>no</strong> es auditable. Requiere conexión a internet; cualquier embed cross-origin (YouTube, etc.) sirve igual.</p>
+    <iframe id="frame-cross" height="150" title="Contenido cross-origin" src="https://example.com"></iframe>
+    <div class="expect"><strong>Esperado:</strong> un aviso informativo <code>crossOriginIframe</code> con el recuento (p. ej. «1 iframe(s) de origen cruzado…»). No se auditan sus elementos internos.</div>
+  </div>
+  </main>
+
+  <script>
+    // Helper: SVG de color como data URI (imagen sin alt para provocar noAltText)
+    function svg(color, w, h) {
+      return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='" + w +
+             "' height='" + h + "'><rect width='" + w + "' height='" + h + "' fill='" + color + "'/></svg>";
+    }
+
+    // Construye una imagen SIN atributo alt + un input sin label dentro de un shadow root.
+    function fillShadow(root) {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;gap:16px;align-items:center;flex-wrap:wrap';
+
+      const img = document.createElement('img');
+      img.width = 120; img.height = 70; img.src = svg('%237b3fa0', 120, 70);
+      // Deliberadamente SIN img.alt → noAltText
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'campo sin label';
+      input.style.cssText = 'padding:8px 10px;border-radius:6px;border:1px solid #ccc';
+      // Sin <label>, sin aria-label, sin id asociado → missingLabel (o placeholderAsLabel)
+
+      wrap.appendChild(img);
+      wrap.appendChild(input);
+      root.appendChild(wrap);
+    }
+
+    // B. Shadow host en el documento principal
+    (function () {
+      const host = document.getElementById('shadow-host-b');
+      const root = host.attachShadow({ mode: 'open' });
+      fillShadow(root);
+    })();
+
+    // C. El contenido del iframe vive en manual-a11y-test-iframe.html (mismo origen),
+    // cargado de forma estática — sin construcción asíncrona, sin carreras con la validación.
+  </script>
+</body>
+</html>
