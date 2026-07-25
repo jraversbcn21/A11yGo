@@ -222,4 +222,86 @@ describe('A11yChecker - color utilities', () => {
       el.remove();
     });
   });
+
+  describe('checkContrast - colores no soportados', () => {
+    function addParagraph(text = 'Hola mundo') {
+      const p = document.createElement('p');
+      p.textContent = text;
+      document.body.appendChild(p);
+      return p;
+    }
+
+    it('emite unsupportedColor cuando el color de texto está en oklch', () => {
+      const p = addParagraph();
+      const restore = stubComputedStyle(el => (el === p ? { color: 'oklch(0.7 0.15 30)' } : {}));
+
+      checker.checkContrast();
+      restore();
+
+      const hits = checker.results.filter(r => r.code === 'unsupportedColor');
+      expect(hits.length).toBe(1);
+      expect(hits[0].severity).toBe('warning');
+      p.remove();
+    });
+
+    it('emite unsupportedColor cuando el fondo sólido está en lab', () => {
+      const p = addParagraph();
+      const restore = stubComputedStyle(el =>
+        el === p ? { color: 'rgb(0, 0, 0)', backgroundColor: 'lab(50% 40 59.5)' } : {}
+      );
+
+      checker.checkContrast();
+      restore();
+
+      expect(checker.results.filter(r => r.code === 'unsupportedColor').length).toBe(1);
+      p.remove();
+    });
+
+    it('emite unsupportedColor cuando el fondo es un gradiente sin stops usables', () => {
+      const p = addParagraph();
+      const restore = stubComputedStyle(el =>
+        el === p
+          ? { color: 'rgb(0, 0, 0)', backgroundImage: 'linear-gradient(90deg, oklch(0.7 0.15 30), lab(50% 40 60))' }
+          : {}
+      );
+
+      checker.checkContrast();
+      restore();
+
+      expect(checker.results.filter(r => r.code === 'unsupportedColor').length).toBe(1);
+      p.remove();
+    });
+
+    it('emite un solo unsupportedColor cuando texto y fondo son no soportados', () => {
+      const p = addParagraph();
+      const restore = stubComputedStyle(el =>
+        el === p ? { color: 'oklch(0.7 0.15 30)', backgroundColor: 'lab(50% 40 59.5)' } : {}
+      );
+
+      checker.checkContrast();
+      restore();
+
+      expect(checker.results.filter(r => r.code === 'unsupportedColor').length).toBe(1);
+      p.remove();
+    });
+
+    it('no emite unsupportedColor para colores rgb normales', () => {
+      const p = addParagraph();
+      const restore = stubComputedStyle(el =>
+        el === p ? { color: 'rgb(0, 0, 0)', backgroundColor: 'rgb(255, 255, 255)' } : {}
+      );
+
+      checker.checkContrast();
+      restore();
+
+      expect(checker.results.filter(r => r.code === 'unsupportedColor').length).toBe(0);
+      p.remove();
+    });
+  });
+
+  describe('getTitle - unsupportedColor', () => {
+    it('devuelve el título de contraste no verificable', () => {
+      expect(checker.getTitle('unsupportedColor')).toBe('Contraste no verificable');
+    });
+  });
 });

@@ -178,11 +178,27 @@ export class A11yChecker {
       try {
         const style = window.getComputedStyle(element);
         const textColor = style.color;
+
+        const unsupportedText = this.describeUnsupportedColor(textColor);
+        if (unsupportedText) {
+          this.addResult('warning', 'unsupportedColor',
+            `Contraste no verificable: color de texto en formato ${unsupportedText} (oklch/lab/color() no soportado)`,
+            element);
+          return;
+        }
+
         const bgInfo = this.getBackgroundInfo(element);
 
         if (bgInfo.type === 'image') {
           this.addResult('warning', 'bgImageContrast',
             'Texto sobre imagen de fondo: el contraste no se puede verificar automáticamente',
+            element);
+          return;
+        }
+
+        if (bgInfo.type === 'unsupported') {
+          this.addResult('warning', 'unsupportedColor',
+            'Contraste no verificable: fondo con gradiente en formato de color no soportado (oklch/lab/color())',
             element);
           return;
         }
@@ -217,7 +233,13 @@ export class A11yChecker {
         const bgColor = bgInfo.color;
         const contrast = this.calculateContrast(textColor, bgColor);
 
-        if (contrast === null) return;
+        if (contrast === null) {
+          const unsupportedBg = this.describeUnsupportedColor(bgColor);
+          this.addResult('warning', 'unsupportedColor',
+            `Contraste no verificable: color de fondo en formato ${unsupportedBg || 'no soportado'} (oklch/lab/color() no soportado)`,
+            element);
+          return;
+        }
 
         if (contrast < 4.5) {
           const fontSize = parseFloat(style.fontSize);
@@ -934,7 +956,8 @@ export class A11yChecker {
       mixedTabOrder: 'Orden de tabulación mezclado',
       gradientContrast: 'Contraste sobre gradiente',
       bgImageContrast: 'Texto sobre imagen de fondo',
-      closedShadow: 'Shadow DOM cerrado'
+      closedShadow: 'Shadow DOM cerrado',
+      unsupportedColor: 'Contraste no verificable'
     };
     
     return titles[code] || code;

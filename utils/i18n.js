@@ -82,6 +82,7 @@ const translations = {
     notFocusable: 'Elemento no accesible por teclado',
     missingRole: 'Falta atributo ARIA role',
     invalidAria: 'Atributo ARIA inválido',
+    unsupportedColor: 'Contraste no verificable (color en formato no soportado)',
     closedShadow: 'Shadow DOM cerrado'
   },
   en: {
@@ -165,6 +166,7 @@ const translations = {
     notFocusable: 'Element not keyboard accessible',
     missingRole: 'Missing ARIA role attribute',
     invalidAria: 'Invalid ARIA attribute',
+    unsupportedColor: 'Contrast not verifiable (unsupported color format)',
     closedShadow: 'Closed shadow DOM'
   }
 };
