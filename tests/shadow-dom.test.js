@@ -78,6 +78,28 @@ describe('deepQuerySelectorAll', () => {
   });
 });
 
+describe('deepQuerySelectorAll con baseDoc', () => {
+  it('consulta el documento base dado en vez del global', () => {
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    const idoc = iframe.contentDocument;
+    idoc.body.innerHTML = '<button>dentro</button>';
+
+    const result = deepQuerySelectorAll('button', null, idoc);
+    expect(result.length).toBe(1);
+    expect(result[0].textContent).toBe('dentro');
+
+    iframe.remove();
+  });
+
+  it('sin baseDoc sigue consultando el document global', () => {
+    document.body.innerHTML = '<button>global</button>';
+    const result = deepQuerySelectorAll('button');
+    expect(result.length).toBe(1);
+    expect(result[0].textContent).toBe('global');
+  });
+});
+
 describe('resolveDeepSelector', () => {
   it('selector sin >>> equivale a document.querySelector', () => {
     document.body.innerHTML = '<button id="btn">a</button>';

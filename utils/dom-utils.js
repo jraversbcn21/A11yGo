@@ -219,15 +219,16 @@ export function collectShadowRoots(root = document, maxDepth = 20) {
 
 /**
  * querySelectorAll que penetra shadow roots abiertos.
- * Devuelve array (no NodeList): documento primero, luego cada shadow root.
+ * Devuelve array (no NodeList): documento base primero, luego cada shadow root.
  * `roots` permite pasar una lista pre-calculada y evitar re-recorridos.
+ * `baseDoc` especifica el documento a consultar (por defecto: el global).
  */
-export function deepQuerySelectorAll(selector, roots = null) {
-  const shadowRoots = roots || collectShadowRoots();
+export function deepQuerySelectorAll(selector, roots = null, baseDoc = document) {
+  const shadowRoots = roots || collectShadowRoots(baseDoc);
   const results = [];
 
   try {
-    results.push(...document.querySelectorAll(selector));
+    results.push(...baseDoc.querySelectorAll(selector));
   } catch (_) {
     return results;
   }
