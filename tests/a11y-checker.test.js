@@ -81,6 +81,40 @@ describe('A11yChecker - color utilities', () => {
     });
   });
 
+  describe('describeUnsupportedColor', () => {
+    it('devuelve null para colores parseables (rgb/hex/hsl)', () => {
+      expect(checker.describeUnsupportedColor('rgb(0, 0, 0)')).toBeNull();
+      expect(checker.describeUnsupportedColor('#fff')).toBeNull();
+      expect(checker.describeUnsupportedColor('hsla(200, 50%, 50%, 0.3)')).toBeNull();
+    });
+
+    it('identifica oklch', () => {
+      expect(checker.describeUnsupportedColor('oklch(0.7 0.15 30)')).toBe('oklch');
+    });
+
+    it('identifica oklab', () => {
+      expect(checker.describeUnsupportedColor('oklab(0.7 0.1 0.1)')).toBe('oklab');
+    });
+
+    it('identifica lab', () => {
+      expect(checker.describeUnsupportedColor('lab(50% 40 59.5)')).toBe('lab');
+    });
+
+    it('identifica lch', () => {
+      expect(checker.describeUnsupportedColor('lch(52.2% 72.2 50)')).toBe('lch');
+    });
+
+    it('identifica color()', () => {
+      expect(checker.describeUnsupportedColor('color(display-p3 1 0 0)')).toBe('color()');
+    });
+
+    it('devuelve null para entradas no describibles (null/undefined/vacío)', () => {
+      expect(checker.describeUnsupportedColor(null)).toBeNull();
+      expect(checker.describeUnsupportedColor(undefined)).toBeNull();
+      expect(checker.describeUnsupportedColor('')).toBeNull();
+    });
+  });
+
   describe('rgbToLuminance', () => {
     it('returns 0 for black', () => {
       expect(checker.rgbToLuminance(0, 0, 0)).toBe(0);

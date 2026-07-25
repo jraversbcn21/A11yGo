@@ -852,6 +852,21 @@ export class A11yChecker {
     return null;
   }
 
+  // Clasifica un color no soportado por parseColor. Devuelve el nombre del formato
+  // ('oklch', 'oklab', 'lab', 'lch', 'color()') o null si el color es parseable/no describible.
+  describeUnsupportedColor(color) {
+    if (!color || typeof color !== 'string') return null;
+    if (this.parseColor(color) !== null) return null;
+
+    const lower = color.trim().toLowerCase();
+    if (lower.startsWith('oklch')) return 'oklch';
+    if (lower.startsWith('oklab')) return 'oklab';
+    if (lower.startsWith('lab')) return 'lab';
+    if (lower.startsWith('lch')) return 'lch';
+    if (lower.startsWith('color(')) return 'color()';
+    return 'no soportado';
+  }
+
   calculateContrast(color1, color2) {
     const rgb1 = this.parseColor(color1);
     const rgb2 = this.parseColor(color2);
