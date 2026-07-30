@@ -37,7 +37,9 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 - [ ] **(CALIDAD) Pasada de humo manual en 3-4 sitios reales diversos**, no solo el fixture
       sintético: una SPA (React/Vue), una página con CSP estricta, una en RTL (árabe/hebreo), y una
       con DOM grande. Verificar que las 4 herramientas funcionan y que la validación no rompe ni
-      cuelga.
+      cuelga. Incluir la **revalidación de keyboardNav en navegador**: tras el fix del off-by-one
+      (30/07, commit `94486d8`), al activar debe enfocar el **1er** elemento del orden de tabulación
+      (antes enfocaba el 2º) y el primer Shift+Tab debe ir al último (antes iba al penúltimo).
 - [ ] **(CALIDAD) Verificación manual pendiente del scroll en iframe (cambio C):** confirmar en
       navegador que el overlay de highlight se reposiciona al hacer scroll **dentro** de un iframe
       same-origin. `content.js` no tiene tests unitarios; usar `test-fixtures/manual-a11y-test.html`.
@@ -59,6 +61,9 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
       Node 22, en cada push y pull request a `master`.
 - [ ] **(MENOR) Revisar `BUGFIX_PLAN.md`**: es un documento histórico de julio; valorar archivarlo o
       marcarlo como resuelto para que no confunda a futuros lectores.
+- [ ] **(MENOR) Subir las actions del CI a v5**: GitHub avisa de que `actions/checkout@v4` y
+      `actions/setup-node@v4` apuntan a Node 20 (deprecado en los runners; los fuerzan a Node 24).
+      Funcionan, pero conviene pasar a `@v5` cuando toque tocar el workflow.
 
 ---
 
@@ -79,7 +84,12 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 ## Lo que sí está listo
 
 - Las 3 mejoras de robustez (shadow DOM, colores modernos oklch/lab, iframes same-origin)
-  implementadas, probadas (109 tests) y **verificadas end-to-end en navegador real**.
+  implementadas, probadas y **verificadas end-to-end en navegador real**.
+- **252 tests unitarios** — los 7 módulos principales con cobertura (sesión del 30/07: content.js,
+  text-reader.js, keyboard-nav.js y visual-nav.js). El proceso destapó y corrigió un off-by-one
+  real en la activación de keyboardNav.
+- **CI en GitHub Actions** (`.github/workflows/ci.yml`): npm ci + lint + tests + build en cada
+  push/PR a master. Primera ejecución verde el 30/07 (tras sincronizar `package-lock.json`).
 - Lint en 0 errores / 0 warnings; convenciones consistentes.
 - Alcance WCAG documentado con honestidad (15/78 criterios, ~19%).
 - Sin llamadas de red propias, sin analítica, sin telemetría (auditado).
