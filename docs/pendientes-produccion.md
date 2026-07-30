@@ -55,8 +55,8 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 - [x] **(MENOR) Tests para `keyboard-nav.js` y `visual-nav.js`** — 43 tests (30/07). El test de
       activación destapó y corrigió un off-by-one real: al activar la navegación por teclado se
       enfocaba el 2º elemento del orden de tabulación (y Shift+Tab inicial iba al penúltimo).
-- [ ] **(MENOR) CI** (`.github/workflows`): no existe. Un workflow que corra `npm run lint` + `npm
-      test` en cada push evitaría regresiones silenciosas.
+- [x] **(MENOR) CI** — `.github/workflows/ci.yml` (30/07): `npm ci` + lint + tests + build en
+      Node 22, en cada push y pull request a `master`.
 - [ ] **(MENOR) Revisar `BUGFIX_PLAN.md`**: es un documento histórico de julio; valorar archivarlo o
       marcarlo como resuelto para que no confunda a futuros lectores.
 

@@ -44,6 +44,7 @@ tests/
   visual-nav.test.js   - Tests de overlays visuales: filtrado de focusables, orden numérico, historial
   stubs/a11y-modules.js - Stubs de los 4 módulos de herramientas (registran llamadas sin depender de vitest)
 test-fixtures/         - Páginas HTML para verificación manual en navegador (shadow DOM + iframes); ver test-fixtures/README.md
+.github/workflows/     - CI: lint + tests + build en cada push y PR a master (ci.yml)
 icons/                 - Iconos en 16/48/128px (PNG + SVG)
 package.json           - Scripts: test, build, lint, package
 eslint.config.js       - ESLint flat config para Chrome extensions

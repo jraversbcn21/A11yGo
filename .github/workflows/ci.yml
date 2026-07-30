@@ -1,0 +1,33 @@
+# CI de A11yGo: lint + tests + build en cada push y pull request.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint (0 errores, 0 warnings)
+        run: npm run lint
+
+      - name: Tests unitarios
+        run: npm test
+
+      - name: Build de producción
+        run: npm run build
