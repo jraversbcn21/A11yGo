@@ -37,6 +37,9 @@ tests/
   a11y-checker.test.js - Tests de parseColor, rgbToLuminance, calculateContrast
   shadow-dom.test.js   - Tests de traversal shadow DOM, selectores >>> y heurística de shadow cerrado
   iframe.test.js       - Tests de collectFrameContexts, selectores ::iframe:: y auditoría por-documento
+  content.test.js      - Tests del orquestador: routing de mensajes, exclusión mutua, highlight, focusin
+  content-failure.test.js - Tests de content.js con contexto de extensión inválido
+  stubs/a11y-modules.js - Stubs de los 4 módulos de herramientas (registran llamadas sin depender de vitest)
 test-fixtures/         - Páginas HTML para verificación manual en navegador (shadow DOM + iframes); ver test-fixtures/README.md
 icons/                 - Iconos en 16/48/128px (PNG + SVG)
 package.json           - Scripts: test, build, lint, package
@@ -146,14 +149,15 @@ Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2
 2. Activar modo desarrollador
 3. `npm install` para dependencias de desarrollo (requiere Node 22+, declarado en `engines`)
 4. `npm run lint` — ejecutar ESLint
-5. `npm test` — ejecutar tests unitarios (109 tests)
+5. `npm test` — ejecutar tests unitarios (134 tests)
 6. `npm run build` — generar dist/ minificado para producción
 7. `npm run package` — build + generar ZIP listo para Chrome Web Store
 
 ## Testing
 - Framework: Vitest con jsdom
-- **109 tests unitarios** cubriendo el motor de validación (parseColor, calculateContrast, rgbToLuminance, describeUnsupportedColor), utilidades DOM (calculateTabOrder, compareDOMOrder, getAccessibleName), traversal de shadow DOM (deepQuerySelectorAll, resolveDeepSelector, selectores >>>) y auditoría de iframes (collectFrameContexts, selectores ::iframe::, checks por-documento)
-- **Sin cobertura de tests** (deuda conocida, ver [`docs/pendientes-produccion.md`](docs/pendientes-produccion.md)): `text-reader.js`, `keyboard-nav.js`, `visual-nav.js`, `content.js`
+- **134 tests unitarios** cubriendo el motor de validación (parseColor, calculateContrast, rgbToLuminance, describeUnsupportedColor), utilidades DOM (calculateTabOrder, compareDOMOrder, getAccessibleName), traversal de shadow DOM (deepQuerySelectorAll, resolveDeepSelector, selectores >>>), auditoría de iframes (collectFrameContexts, selectores ::iframe::, checks por-documento) y el orquestador `content.js` (routing de mensajes, exclusión mutua, callbacks onDeactivate, highlight con timers, handler focusin, contexto inválido)
+- `content.js` se testea cargándolo como script de efectos: `chrome.runtime.getURL` se redirige a `tests/stubs/a11y-modules.js` (stubs de los 4 módulos) y a logger/dom-utils reales; el listener de mensajes se captura del mock de `chrome.runtime.onMessage`
+- **Sin cobertura de tests** (deuda conocida, ver [`docs/pendientes-produccion.md`](docs/pendientes-produccion.md)): `text-reader.js`, `keyboard-nav.js`, `visual-nav.js`
 - Mocks de Chrome API en `tests/setup.js`
 - Ejecutar: `npm test` o `npm run test:watch` (requiere Node 22+)
 - Antes de tocar `a11y-checker.js` o `dom-utils.js`, añadir un test en `tests/` que reproduzca el bug

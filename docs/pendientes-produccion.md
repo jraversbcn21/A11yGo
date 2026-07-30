@@ -1,6 +1,6 @@
 # Pendientes antes de subir a producción (Chrome Web Store)
 
-**Última actualización:** 25 de julio de 2026
+**Última actualización:** 30 de julio de 2026
 **Estado general:** funcional y probado en lo trabajado recientemente; **no listo para publicar todavía**.
 El único bloqueante duro (política de privacidad) ya está resuelto; quedan assets de tienda y
 recomendaciones de calidad.
@@ -41,8 +41,10 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 - [ ] **(CALIDAD) Verificación manual pendiente del scroll en iframe (cambio C):** confirmar en
       navegador que el overlay de highlight se reposiciona al hacer scroll **dentro** de un iframe
       same-origin. `content.js` no tiene tests unitarios; usar `test-fixtures/manual-a11y-test.html`.
-- [ ] **(CALIDAD) Tests para `content.js`** (608 líneas, orquestador de activación/mensajería, 0
-      tests). Es el "pegamento" de toda la extensión y el que más riesgo de regresión tiene.
+- [x] **(CALIDAD) Tests para `content.js`** — 25 tests (30/07): routing de mensajes, exclusión
+      mutua, callbacks `onDeactivate`, comandos del lector, `runA11yCheck`, highlight (overlay,
+      auto-remove 12s, reemplazo), handler `focusin` y contexto de extensión inválido. Ver
+      `tests/content.test.js`, `tests/content-failure.test.js` y `tests/stubs/a11y-modules.js`.
 - [ ] **(CALIDAD) Tests para `text-reader.js`** (1914 líneas, 0 tests): lógica async de voces,
       debounce, reentrancia (`readToken`). El módulo más grande sin red de tests.
 
@@ -65,11 +67,10 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 | `utils/text-reader.js` | 1914 | ❌ sin tests |
 | `utils/keyboard-nav.js` | 832 | ❌ sin tests |
 | `utils/visual-nav.js` | 774 | ❌ sin tests |
-| `content.js` | 608 | ❌ sin tests |
+| `content.js` | 608 | ✅ cubierto (orquestador: mensajería, activación, highlight) |
 | `utils/i18n.js` / `logger.js` | 234 | parcial / trivial |
 
-**Total: 109 tests** (bien concentrados en el motor de validación y las utilidades DOM, que es
-lo trabajado y verificado end-to-end esta sesión).
+**Total: 134 tests** (motor de validación, utilidades DOM y el orquestador `content.js`).
 
 ## Lo que sí está listo
 
