@@ -45,8 +45,10 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
       mutua, callbacks `onDeactivate`, comandos del lector, `runA11yCheck`, highlight (overlay,
       auto-remove 12s, reemplazo), handler `focusin` y contexto de extensión inválido. Ver
       `tests/content.test.js`, `tests/content-failure.test.js` y `tests/stubs/a11y-modules.js`.
-- [ ] **(CALIDAD) Tests para `text-reader.js`** (1914 líneas, 0 tests): lógica async de voces,
-      debounce, reentrancia (`readToken`). El módulo más grande sin red de tests.
+- [x] **(CALIDAD) Tests para `text-reader.js`** — 75 tests (30/07): detección de idioma,
+      `formatTextForSpeech`, normalización anti-deletreo, `getAccessibleName`/`getElementType`,
+      deduplicación, reentrancia de `read()` (`readToken`), reintento de voces, focusables
+      temporales, hover/selección y highlight. Ver `tests/text-reader.test.js`.
 
 ## 3. Deuda menor (no bloquea, anotada para no perderla)
 
@@ -64,13 +66,14 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 |---|---:|---|
 | `utils/a11y-checker.js` | 1052 | ✅ cubierto (motor de validación) |
 | `utils/dom-utils.js` | 340 | ✅ cubierto (DOM, shadow, iframes) |
-| `utils/text-reader.js` | 1914 | ❌ sin tests |
+| `utils/text-reader.js` | 1914 | ✅ cubierto (lógica pura, DOM y async con mocks de speechSynthesis) |
 | `utils/keyboard-nav.js` | 832 | ❌ sin tests |
 | `utils/visual-nav.js` | 774 | ❌ sin tests |
 | `content.js` | 608 | ✅ cubierto (orquestador: mensajería, activación, highlight) |
 | `utils/i18n.js` / `logger.js` | 234 | parcial / trivial |
 
-**Total: 134 tests** (motor de validación, utilidades DOM y el orquestador `content.js`).
+**Total: 209 tests** (motor de validación, utilidades DOM, orquestador `content.js` y lector
+`text-reader.js`).
 
 ## Lo que sí está listo
 
