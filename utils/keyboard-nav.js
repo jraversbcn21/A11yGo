@@ -277,11 +277,11 @@ export class KeyboardNav {
     }
     
     logger.log(`KeyboardNav: Navegando hacia adelante desde índice ${this.currentIndex}`);
-    
-    // Asegurar que el índice sea válido
+
+    // Asegurar que el índice sea válido: -1 hace que el bucle avance al índice 0
     if (this.currentIndex < 0) {
-      this.currentIndex = 0;
-      logger.log('KeyboardNav: Índice reseteado a 0');
+      this.currentIndex = -1;
+      logger.log('KeyboardNav: Empezando por el primer elemento');
     } else if (this.currentIndex < this.focusableElements.length) {
       const currentElement = this.focusableElements[this.currentIndex];
       if (currentElement) {
@@ -421,11 +421,11 @@ export class KeyboardNav {
     }
     
     logger.log(`KeyboardNav: Navegando hacia atrás desde índice ${this.currentIndex}`);
-    
-    // Asegurar que el índice sea válido
+
+    // Asegurar que el índice sea válido: 0 hace que el bucle retroceda al último elemento
     if (this.currentIndex < 0) {
-      this.currentIndex = this.focusableElements.length - 1;
-      logger.log(`KeyboardNav: Índice reseteado a ${this.currentIndex}`);
+      this.currentIndex = 0;
+      logger.log('KeyboardNav: Empezando por el último elemento');
     } else if (this.currentIndex < this.focusableElements.length) {
       const currentElement = this.focusableElements[this.currentIndex];
       if (currentElement) {

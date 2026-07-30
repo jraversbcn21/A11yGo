@@ -52,7 +52,9 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 
 ## 3. Deuda menor (no bloquea, anotada para no perderla)
 
-- [ ] **(MENOR) Tests para `keyboard-nav.js` y `visual-nav.js`** (0 tests cada uno).
+- [x] **(MENOR) Tests para `keyboard-nav.js` y `visual-nav.js`** — 43 tests (30/07). El test de
+      activación destapó y corrigió un off-by-one real: al activar la navegación por teclado se
+      enfocaba el 2º elemento del orden de tabulación (y Shift+Tab inicial iba al penúltimo).
 - [ ] **(MENOR) CI** (`.github/workflows`): no existe. Un workflow que corra `npm run lint` + `npm
       test` en cada push evitaría regresiones silenciosas.
 - [ ] **(MENOR) Revisar `BUGFIX_PLAN.md`**: es un documento histórico de julio; valorar archivarlo o
@@ -67,13 +69,12 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 | `utils/a11y-checker.js` | 1052 | ✅ cubierto (motor de validación) |
 | `utils/dom-utils.js` | 340 | ✅ cubierto (DOM, shadow, iframes) |
 | `utils/text-reader.js` | 1914 | ✅ cubierto (lógica pura, DOM y async con mocks de speechSynthesis) |
-| `utils/keyboard-nav.js` | 832 | ❌ sin tests |
-| `utils/visual-nav.js` | 774 | ❌ sin tests |
+| `utils/keyboard-nav.js` | 832 | ✅ cubierto (navegación, orden WCAG, tabindex inyectado) |
+| `utils/visual-nav.js` | 774 | ✅ cubierto (overlays, filtrado, historial) |
 | `content.js` | 608 | ✅ cubierto (orquestador: mensajería, activación, highlight) |
 | `utils/i18n.js` / `logger.js` | 234 | parcial / trivial |
 
-**Total: 209 tests** (motor de validación, utilidades DOM, orquestador `content.js` y lector
-`text-reader.js`).
+**Total: 252 tests** — todos los módulos principales tienen cobertura.
 
 ## Lo que sí está listo
 
