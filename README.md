@@ -111,16 +111,19 @@ La extensión está construida con:
 ```bash
 npm install          # Instalar dependencias
 npm run lint         # Ejecutar ESLint
-npm test             # Ejecutar tests unitarios (109 tests)
+npm test             # Ejecutar tests unitarios (252 tests)
 npm run build        # Generar dist/ minificado
 npm run package      # Build + ZIP para Chrome Web Store
 ```
 
 ## Estado del proyecto
 
-Funcional y probado (109 tests), pero **aún no publicado** en la Chrome Web Store. Las tareas
-pendientes antes de subir a producción (assets de tienda, verificaciones de calidad, deuda de tests)
-están documentadas en [`docs/pendientes-produccion.md`](docs/pendientes-produccion.md).
+Funcional y probado (252 tests, CI en GitHub Actions), pero **aún no publicado** en la Chrome Web
+Store. Las tareas pendientes antes de subir a producción (assets de tienda, verificaciones de
+calidad) están documentadas en [`docs/pendientes-produccion.md`](docs/pendientes-produccion.md).
+
+Para la verificación manual en navegador, ver [`docs/verificacion-manual.md`](docs/verificacion-manual.md).
+Los textos de la ficha de tienda están redactados en [`docs/ficha-web-store.md`](docs/ficha-web-store.md).
 
 ## Privacidad
 

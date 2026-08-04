@@ -21,8 +21,14 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
   - [ ] Al menos **1 captura de pantalla 1280×800** (o 640×400) de la extensión en uso. Ideal: 3-5
         mostrando lector, navegación, validación y panel de resultados. *(Requiere capturas reales;
         las hace el humano.)*
-  - [ ] **Descripción de tienda** (título + descripción corta + descripción detallada). *(Se puede
-        redactar a partir del README; pendiente de escribir.)*
+  - [x] **Descripción de tienda** (título + descripción corta + descripción detallada) — redactada
+        en es/en en [`ficha-web-store.md`](./ficha-web-store.md), con longitudes verificadas contra
+        los límites de la tienda. Falta **pegarla en el formulario**.
+  - [ ] **(BLOQUEANTE) Verificar si la ficha en inglés exige `_locales/`.** El proyecto usa un i18n
+        propio (`utils/i18n.js`), no el mecanismo de Chrome: no hay `_locales/` ni `default_locale`.
+        Si el panel de desarrollador no deja añadir la ficha en inglés sin ellos, hay que crear
+        `_locales/{es,en}/messages.json` con `appName`/`appDescription`, añadir `default_locale` al
+        manifiesto y regenerar el ZIP. Detalle en `ficha-web-store.md`.
   - [ ] *(Opcional)* Imagen promocional (440×280) e ícono de marquesina.
 - [ ] **(BLOQUEANTE) Justificación de permisos** en el formulario de envío. El texto ya está
       redactado en la tabla de `PRIVACY.md` → copiar en el formulario para `<all_urls>`, `scripting`,
