@@ -1,3 +1,20 @@
+> # ✅ DOCUMENTO HISTÓRICO — RESUELTO Y ARCHIVADO
+>
+> **Las 30 incidencias de este plan se corrigieron en julio de 2026, en 4 fases.** El documento se
+> conserva por su valor de contexto —explica *por qué* el código tiene la forma que tiene— pero
+> **ya no describe trabajo pendiente**. No lo uses como lista de tareas.
+>
+> - Resumen de las correcciones: sección «Correcciones realizadas» de [`CLAUDE.md`](../../CLAUDE.md).
+> - Trabajo realmente pendiente: [`docs/pendientes-produccion.md`](../pendientes-produccion.md).
+>
+> Las referencias a archivos y líneas de aquí abajo son de **julio de 2026** y muchas han quedado
+> desfasadas: desde entonces se añadieron el traversal de shadow DOM, la auditoría de iframes y
+> 252 tests. Verifica contra el código actual antes de fiarte de cualquier cita.
+>
+> *Archivado el 4 de agosto de 2026 (antes en la raíz del repo como `BUGFIX_PLAN.md`).*
+
+---
+
 # Plan de arreglo — Bug hunt A11yGo (2026-07-10)
 
 Resultado de una revisión con 4 agentes en paralelo (motor de validación, herramientas

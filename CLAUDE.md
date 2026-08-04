@@ -170,7 +170,8 @@ Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2
 ## Correcciones realizadas (Jul 2026)
 
 Bug hunt con 4 revisores en paralelo + verificación manual de cada hallazgo contra el código.
-Las 30 incidencias documentadas en **[`BUGFIX_PLAN.md`](./BUGFIX_PLAN.md)** fueron resueltas en
+Las 30 incidencias documentadas en **[`docs/archive/bugfix-plan-2026-07.md`](./docs/archive/bugfix-plan-2026-07.md)**
+(archivado; documento histórico, no lista de tareas) fueron resueltas en
 4 fases. Resumen de las correcciones clave:
 
 ### Ciclo de vida (Fase 1)

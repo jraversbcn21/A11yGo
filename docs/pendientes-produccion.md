@@ -65,11 +65,11 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
       enfocaba el 2º elemento del orden de tabulación (y Shift+Tab inicial iba al penúltimo).
 - [x] **(MENOR) CI** — `.github/workflows/ci.yml` (30/07): `npm ci` + lint + tests + build en
       Node 22, en cada push y pull request a `master`.
-- [ ] **(MENOR) Revisar `BUGFIX_PLAN.md`**: es un documento histórico de julio; valorar archivarlo o
-      marcarlo como resuelto para que no confunda a futuros lectores.
-- [ ] **(MENOR) Subir las actions del CI a v5**: GitHub avisa de que `actions/checkout@v4` y
-      `actions/setup-node@v4` apuntan a Node 20 (deprecado en los runners; los fuerzan a Node 24).
-      Funcionan, pero conviene pasar a `@v5` cuando toque tocar el workflow.
+- [x] **(MENOR) Revisar `BUGFIX_PLAN.md`** — archivado el 04/08 en
+      [`archive/bugfix-plan-2026-07.md`](./archive/bugfix-plan-2026-07.md) con un aviso de documento
+      histórico resuelto. Referencias actualizadas en `CLAUDE.md`.
+- [x] **(MENOR) Subir las actions del CI a v5** — `actions/checkout@v5` y `actions/setup-node@v5`
+      (04/08). Elimina el aviso de deprecación de Node 20 en los runners.
 
 ---
 
