@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A11yGo — Fixture de verificación manual (navegación por teclado)</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      max-width: 860px; margin: 0 auto; padding: 24px 20px 140px;
+      line-height: 1.5; color: #1a1a1a; background: #fafafa;
+    }
+    header { border-bottom: 2px solid #333; margin-bottom: 8px; }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.15rem; margin-top: 0; }
+    .card {
+      border: 1px solid #d0d0d0; border-radius: 10px; padding: 18px 20px;
+      margin: 28px 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .expect {
+      background: #f0f6ff; border-left: 4px solid #4a90d9;
+      padding: 10px 14px; margin-top: 14px; border-radius: 0 6px 6px 0; font-size: .93rem;
+    }
+    .warn {
+      background: #fff8e6; border-left: 4px solid #d9a441;
+      padding: 10px 14px; margin-top: 14px; border-radius: 0 6px 6px 0; font-size: .93rem;
+    }
+    .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+    .badge {
+      display: inline-block; min-width: 62px; text-align: center;
+      background: #1f6f43; color: #fff; font-weight: 700; font-size: .8rem;
+      padding: 4px 9px; border-radius: 999px; letter-spacing: .3px;
+    }
+    .badge.skip { background: #8a8a8a; }
+    .badge.quirk { background: #9a5b1f; }
+    .ctl { padding: 8px 12px; border-radius: 6px; border: 1px solid #bbb; font: inherit; }
+    a.ctl { background: #fff; text-decoration: none; color: #14508c; }
+    button.ctl { background: #f2f2f2; cursor: pointer; }
+    /* Foco bien visible: la verificación depende de ver DÓNDE está el foco */
+    :focus-visible, :focus { outline: 3px solid #d92662; outline-offset: 2px; }
+    ol.order { background: #fff; border: 1px solid #d0d0d0; border-radius: 8px; padding: 14px 14px 14px 34px; }
+    ol.order li { margin: 3px 0; }
+    code { background: #eee; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+    .dom-note { color: #666; font-size: .86rem; font-style: italic; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Fixture de verificación manual — navegación por teclado</h1>
+    <p>Comprueba en un navegador real lo que jsdom no puede: que <strong>KeyboardNav</strong> recorre
+       los elementos en el orden de tabulación de la spec WCAG, y en particular que al activarse
+       enfoca el <strong>primer</strong> elemento (regresión del off-by-one, commit <code>94486d8</code>).</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Orden de tabulación esperado</h2>
+      <p>Con la extensión activada en modo <strong>Navegación por teclado</strong>, el recorrido debe ser
+         exactamente este. Cada control lleva rotulado su número esperado.</p>
+      <ol class="order">
+        <li><strong>TAB 1</strong> — botón con <code>tabindex="1"</code></li>
+        <li><strong>TAB 2</strong> — botón con <code>tabindex="2"</code></li>
+        <li><strong>TAB 3</strong> — campo con <code>tabindex="3"</code></li>
+        <li><strong>TAB 4</strong> — enlace <code>a[href]</code> (orden natural desde aquí)</li>
+        <li><strong>TAB 5</strong> — botón</li>
+        <li><strong>TAB 6</strong> — <code>input type="text"</code></li>
+        <li><strong>TAB 7</strong> — <code>select</code></li>
+        <li><strong>TAB 8</strong> — <code>textarea</code></li>
+        <li><strong>TAB 9</strong> — <code>div tabindex="0"</code></li>
+        <li><strong>TAB 10</strong> — botón que elimina TAB 4 del DOM</li>
+      </ol>
+      <div class="expect">
+        <strong>Total esperado: 10 elementos focusables.</strong> Los tres <code>tabindex</code> positivos
+        van primero y en orden ascendente (1→2→3) <em>aunque en el DOM estén desordenados</em>; el resto
+        sigue el orden del documento.
+      </div>
+    </div>
+
+    <!-- BLOQUE 1: tabindex positivos, DELIBERADAMENTE desordenados en el DOM -------- -->
+    <div class="card">
+      <h2>1. <code>tabindex</code> positivos (desordenados en el DOM)</h2>
+      <p class="dom-note">Orden en el DOM: 2 → 1 → 3. Orden de tabulación correcto: 1 → 2 → 3.</p>
+
+      <div class="row">
+        <span class="badge">TAB 2</span>
+        <button class="ctl" id="k-tab2" tabindex="2">Botón con tabindex=2 <span class="dom-note">(1º en el DOM)</span></button>
+      </div>
+      <div class="row">
+        <span class="badge">TAB 1</span>
+        <button class="ctl" id="k-tab1" tabindex="1">Botón con tabindex=1 <span class="dom-note">(2º en el DOM)</span></button>
+      </div>
+      <div class="row">
+        <span class="badge">TAB 3</span>
+        <input class="ctl" id="k-tab3" tabindex="3" type="text" aria-label="Campo con tabindex 3" value="tabindex=3">
+      </div>
+
+      <div class="expect">
+        <strong>Esperado:</strong> al activar la herramienta el foco cae en <strong>TAB 1</strong>, no en TAB 2.
+        Este es el caso exacto que fallaba antes del fix del off-by-one.
+      </div>
+    </div>
+
+    <!-- BLOQUE 2: orden natural ---------------------------------------------------- -->
+    <div class="card">
+      <h2>2. Orden natural (sin <code>tabindex</code> o con <code>0</code>)</h2>
+
+      <div class="row">
+        <span class="badge">TAB 4</span>
+        <a class="ctl" id="k-tab4" href="#k-tab4">Enlace con href</a>
+      </div>
+      <div class="row">
+        <span class="badge">TAB 5</span>
+        <button class="ctl" id="k-tab5">Botón sin tabindex</button>
+      </div>
+      <div class="row">
+        <span class="badge">TAB 6</span>
+        <input class="ctl" id="k-tab6" type="text" aria-label="Campo de texto natural" value="input natural">
+      </div>
+      <div class="row">
+        <span class="badge">TAB 7</span>
+        <select class="ctl" id="k-tab7" aria-label="Selector natural">
+          <option>Opción A</option>
+          <option>Opción B</option>
+        </select>
+      </div>
+      <div class="row">
+        <span class="badge">TAB 8</span>
+        <textarea class="ctl" id="k-tab8" rows="2" aria-label="Área de texto natural">textarea natural</textarea>
+      </div>
+      <div class="row">
+        <span class="badge">TAB 9</span>
+        <div class="ctl" id="k-tab9" tabindex="0" role="button">div con tabindex=0 y role=button</div>
+      </div>
+      <div class="row">
+        <span class="badge">TAB 10</span>
+        <button class="ctl" id="k-tab10">Eliminar TAB 4 del DOM</button>
+      </div>
+
+      <div class="expect">
+        <strong>Esperado:</strong> recorrido 4→5→6→7→8→9→10 en orden de documento. Desde TAB 10, un Tab
+        más debe volver a <strong>TAB 1</strong> (wrap-around).
+      </div>
+    </div>
+
+    <!-- BLOQUE 3: elementos que deben quedar EXCLUIDOS ------------------------------ -->
+    <div class="card">
+      <h2>3. Elementos que deben quedar excluidos</h2>
+      <p>Ninguno de estos debe recibir foco en el recorrido. Algunos son invisibles a propósito.</p>
+
+      <div class="row">
+        <span class="badge skip">NUNCA</span>
+        <button class="ctl" id="k-skip-negative" tabindex="-1">tabindex="-1" (excluido de la tabulación)</button>
+      </div>
+      <div class="row">
+        <span class="badge skip">NUNCA</span>
+        <button class="ctl" id="k-skip-disabled" disabled>disabled</button>
+      </div>
+      <div class="row">
+        <span class="badge skip">NUNCA</span>
+        <span class="dom-note">Hay además un botón con <code>display:none</code>, otro con
+        <code>visibility:hidden</code> y otro con <code>opacity:0</code> — invisibles por definición.</span>
+      </div>
+
+      <button class="ctl" id="k-skip-hidden" style="display:none">display:none</button>
+      <button class="ctl" id="k-skip-visibility" style="visibility:hidden">visibility:hidden</button>
+      <button class="ctl" id="k-skip-opacity" style="opacity:0">opacity:0</button>
+
+      <div class="expect">
+        <strong>Esperado:</strong> el recorrido nunca se detiene en ninguno de los 5. Si el foco cae en
+        uno, es un fallo.
+      </div>
+    </div>
+
+    <!-- BLOQUE 4: quirk conocido --------------------------------------------------- -->
+    <div class="card">
+      <h2>4. Caso a observar: <code>aria-hidden="false"</code></h2>
+
+      <div class="row">
+        <span class="badge quirk">OBSERVAR</span>
+        <button class="ctl" id="k-quirk-ariahidden" aria-hidden="false">Botón con aria-hidden="false"</button>
+      </div>
+
+      <div class="warn">
+        <strong>No es un paso de aprobado/fallo.</strong> El filtro actual
+        (<code>utils/keyboard-nav.js</code>) excluye por <code>!el.hasAttribute('aria-hidden')</code>, es
+        decir, por la <em>presencia</em> del atributo y no por su valor. Con el código de hoy este botón
+        queda <strong>excluido</strong>, aunque <code>aria-hidden="false"</code> significa «no oculto» y
+        semánticamente debería ser focusable.
+        <br><br>
+        Anota lo que observes: si queda excluido, el comportamiento coincide con el código actual y
+        conviene abrir una incidencia para corregir el filtro (comparar el valor, no la presencia).
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // TAB 10 elimina el enlace TAB 4 del DOM para verificar que el MutationObserver
+    // recalcula el orden y el recorrido salta el elemento eliminado.
+    (function () {
+      const btn = document.getElementById('k-tab10');
+      btn.addEventListener('click', function () {
+        const link = document.getElementById('k-tab4');
+        if (link) {
+          link.remove();
+          btn.textContent = 'TAB 4 eliminado — ahora deben quedar 9 focusables';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -10,7 +10,14 @@ pueden cubrir: el traversal y el **highlight** (posicionamiento del overlay) del
   same-origin, D iframe cross-origin). Cada tarjeta indica su resultado esperado.
 - `manual-a11y-test-iframe.html` — contenido del iframe de la tarjeta C (mismo origen), con su
   propio `<h1>`, una imagen sin `alt`, y un shadow host anidado con otra imagen sin `alt` (caso
-  combinado ` ::iframe:: … >>> `). Cargado como archivo estático → sin carreras.
+  combinado ` ::iframe:: … >>> `). Cargado como archivo estático → sin carreras. Incluye **relleno
+  de texto inerte** que le da **scroll interno propio**: sin él no se puede verificar que el overlay
+  del highlight se reposiciona al hacer scroll *dentro* del iframe. El relleno son solo párrafos
+  (`#333` sobre `#fff`, sin encabezados ni controles), así que **no altera el reporte esperado**.
+- `manual-keyboard-test.html` — fixture **independiente** para la navegación por teclado. Orden de
+  tabulación conocido y rotulado (`TAB 1`…`TAB 10`), con `tabindex` positivos desordenados en el
+  DOM, cinco casos que deben quedar excluidos y un control que elimina un focusable en caliente.
+  No lo uses con el validador: su propósito es otro y no tiene reporte esperado.
 
 ## Cómo usar
 

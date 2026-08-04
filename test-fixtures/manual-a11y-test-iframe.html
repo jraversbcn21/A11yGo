@@ -4,21 +4,51 @@
   <meta charset="UTF-8">
   <title>Contenido embebido same-origin</title>
   <style>
-    body { font-family: system-ui, sans-serif; padding: 14px; margin: 0; }
+    body { font-family: system-ui, sans-serif; padding: 14px; margin: 0; color: #333; background: #fff; }
     h1 { font-size: 1.1rem; }
     .box { border: 1px solid #ddd; border-radius: 6px; padding: 10px; margin-top: 8px; }
     img { border-radius: 4px; }
+    /* Relleno inerte: da al iframe scroll interno propio para poder verificar que
+       el overlay del highlight se reposiciona al hacer scroll DENTRO del iframe.
+       Solo texto (#333 sobre #fff ≈ 12.6:1): no añade hallazgos al reporte esperado. */
+    .filler { color: #333; }
   </style>
 </head>
 <body>
   <!-- Landmark propio del iframe (evita missingLandmark por-documento) -->
   <main>
     <h1>Encabezado propio del iframe</h1>
+
+    <!-- Relleno inerte para empujar los elementos objetivo por debajo del fold del
+         iframe (alto 240px en la página anfitriona). Sin encabezados, imágenes ni
+         controles: no altera el reporte esperado (4 errores / 1 advertencia / 1 info). -->
+    <p class="filler">Desplázate <strong>dentro de este iframe</strong> para llegar a los elementos
+      objetivo. Este texto existe solo para crear scroll interno propio, que es lo que permite
+      comprobar que el overlay del highlight se reposiciona cuando el scroll ocurre dentro de un
+      documento embebido y no en la página anfitriona.</p>
+    <p class="filler">Los eventos de scroll no cruzan las fronteras entre documentos, así que un
+      handler suscrito únicamente a la ventana superior no se enteraría de este desplazamiento. Por
+      eso <code>content.js</code> se suscribe también a las ventanas de los iframes contenedores.</p>
+    <p class="filler">Si el overlay se queda anclado en su posición original mientras este contenido
+      se mueve, la suscripción al scroll del iframe está rota. Si acompaña al elemento, funciona.</p>
+    <p class="filler">Relleno adicional para asegurar que el recorrido de scroll sea claramente
+      observable y que los dos elementos objetivo empiecen fuera de la vista.</p>
+
     <p>Imagen sin alt dentro del iframe:</p>
     <!-- Imagen azul SIN alt → noAltText con selector ::iframe:: -->
     <img id="iframe-img" width="100" height="60"
          src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='60'><rect width='100' height='60' fill='%234a90d9'/></svg>">
     <div id="iframe-shadow-host" class="box">host de shadow DENTRO del iframe →</div>
+
+    <!-- Relleno posterior: deja margen de scroll por debajo de los objetivos, para poder
+         desplazarlos en ambos sentidos con el overlay ya colocado. -->
+    <p class="filler">Margen de scroll por debajo de los elementos objetivo. Con el overlay ya
+      colocado, desplaza el iframe arriba y abajo: el recuadro debe seguir al elemento en todo
+      momento, sin retraso acumulado ni desajuste de posición.</p>
+    <p class="filler">Comprueba también el caso combinado: el elemento dentro del shadow root que
+      está dentro de este iframe es el más exigente, porque el overlay tiene que componer el offset
+      del shadow y el del iframe a la vez.</p>
+    <p class="filler">Fin del contenido embebido.</p>
   </main>
 
   <script>
