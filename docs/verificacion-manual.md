@@ -8,6 +8,28 @@ reales. Todo lo de este documento requiere un Chrome de verdad y una persona mir
 
 Marca cada paso en la [hoja de resultados](#hoja-de-resultados) del final.
 
+> ## Estado de la pasada en curso (sesión 04/08/2026)
+>
+> Se ejecutó el **bloque 4** (pasada de humo) en el navegador real de la usuaria, con extensión
+> cargada sin empaquetar desde la raíz del repo. **Los bloques 1, 2 y 3 (regresiones vía fixture)
+> siguen sin ejecutar** — no se tocó `localhost:8080` en esta sesión.
+>
+> | Sitio | Lector | Teclado | Visual | Validador | Estado |
+> |---|:---:|:---:|:---:|:---:|---|
+> | github.com | ✅ | ✅ | ✅ | ✅ | **Completo**, 2 hallazgos no bloqueantes (ver abajo) |
+> | bershka.com/es/h-woman.html | ⏳ | ☐ | ☐ | ☐ | Lector propuesto, **falta confirmar el resultado** |
+> | aevi.org.es | ☐ | ☐ | ☐ | ☐ | No iniciado |
+> | bershka.com/sa/h-woman.html (candidato RTL) | ☐ | ☐ | ☐ | ☐ | No iniciado |
+>
+> **Para retomar:** siguiente paso exacto es **Lector de Texto en `bershka.com/es/h-woman.html`**
+> (pasos: activar, hover + clic en un par de elementos, confirmar idioma español sin deletreo,
+> Escape, revisar consola por errores *nuevos* — ya se sabe que `HeroCarousel.motion.tsx` y
+> `useVideo.ts` son bugs propios del bundle de Bershka, confirmado por grep en el repo, no de
+> A11yGo).
+>
+> La tabla de "Sitios propuestos" de más abajo se actualizó para reflejar los sitios realmente
+> usados en esta ronda (elegidos por la usuaria) en vez de la sugerencia original.
+
 | Bloque | Qué verifica | Tiempo |
 |---|---|---:|
 | [0. Preparación](#0-preparación) | Entorno correcto | 5 min |
@@ -134,12 +156,20 @@ visual, Validar Accesibilidad) y aplica estos criterios:
 
 ### Sitios propuestos
 
+Actualizado el 04/08 con los sitios realmente usados (elegidos por la usuaria en vez de la
+sugerencia original). Sirven igual de bien y cubren los mismos perfiles, salvo el DOM grande, que
+no está cubierto por ninguno de los cuatro — considera añadir un quinto sitio si quieres esa señal.
+
 | Perfil | Sitio | Qué estresa |
 |---|---|---|
-| **SPA con routing de cliente** | [react.dev](https://react.dev) | La reinyección de `content.js` en navegaciones SPA (`background.js` + `webNavigation`). **Navega entre secciones con la herramienta activa** y confirma que sigue funcionando tras cambiar de ruta |
 | **CSP estricta** | [github.com](https://github.com) | Que la inyección de estilos y overlays no la bloquee la Content Security Policy. Vigila la consola por violaciones de CSP |
-| **RTL** | [ar.wikipedia.org](https://ar.wikipedia.org) | Posicionamiento de overlays y tooltips en dirección derecha-a-izquierda; el orden de tabulación en RTL |
-| **DOM grande** | Un artículo largo de [en.wikipedia.org](https://en.wikipedia.org/wiki/World_War_II) | Rendimiento del validador y de la navegación visual con miles de nodos. **Cronometra la validación** |
+| **E-commerce / JS pesado** | [bershka.com/es/h-woman.html](https://www.bershka.com/es/h-woman.html) | Framework React con carrusel/vídeo propios, muchas imágenes, filtros dinámicos. Ojo: el sitio tiene bugs propios en consola (`HeroCarousel.motion.tsx`, `useVideo.ts`) — confirmado que no son de A11yGo |
+| **Baseline / español** | [aevi.org.es](https://aevi.org.es) | Sitio de una asociación de accesibilidad — referencia de comparación, contenido en español para el Lector |
+| **RTL (candidato)** | [bershka.com/sa/h-woman.html](https://www.bershka.com/sa/h-woman.html) | Misma tienda en la región de Arabia Saudí — **sin confirmar todavía si sirve el layout en árabe/RTL**; si no lo hace, usa `ar.wikipedia.org` como alternativa segura |
+
+*(Alternativas descartadas esta ronda, útiles si hace falta DOM grande o SPA con routing de
+cliente: [react.dev](https://react.dev), un artículo largo de
+[en.wikipedia.org](https://en.wikipedia.org/wiki/World_War_II).)*
 
 ### Comprobaciones transversales
 
@@ -152,6 +182,52 @@ visual, Validar Accesibilidad) y aplica estos criterios:
 | 4.5 | Activa una herramienta y luego otra sin desactivar la primera | **Exclusión mutua:** la primera se desactiva sola; nunca hay dos activas a la vez |
 | 4.6 | Con una herramienta activa, navega a otra ruta en la SPA | La herramienta sigue operativa (o se reinyecta) sin dejar la página en estado roto |
 | 4.7 | Revisa la consola de la página y la del service worker en los 4 sitios | Sin excepciones no capturadas |
+
+---
+
+## Hallazgos registrados (no bloqueantes)
+
+Encontrados durante la pasada de humo en github.com (04/08). Ninguno impide publicar — la
+herramienta se recupera sola en ambos casos — pero conviene corregirlos en algún momento.
+
+### H1. El filtro de focusables no comprueba visibilidad de ancestros
+
+`utils/keyboard-nav.js:112-117` (`updateFocusableElements`) solo mira `display`/`visibility`/
+`opacity` del **propio elemento** vía `getComputedStyle`. Si un elemento está dentro de un
+contenedor ancestro oculto (p. ej. un menú desplegable cerrado), su computed style individual
+sigue siendo "visible" — `getComputedStyle` no propaga el `display:none` de un ancestro — así que
+pasa el filtro y se cuenta como navegable, pero el navegador se niega a enfocarlo.
+
+**Repro:** en github.com, con Navegación por teclado activa, tabular hasta los enlaces del mega-menú
+"Enterprise" (cerrado). Consola:
+```
+KeyboardNav: ✗ enlace (índice 12) no se pudo enfocar. Razón: foco capturado por otro elemento (enlace)
+KeyboardNav: focus() llamado pero activeElement es: 
+KeyboardNav: enfoque con tabindex falló, activeElement es: 
+```
+en cadena para varios índices consecutivos (el bloque de enlaces del menú cerrado).
+
+**Impacto:** el contador "Elementos navegables" del panel queda inflado (en github.com marcó 134,
+probablemente por encima del real). El recorrido **no se atasca** — el bucle de reintento
+(`attempts++`) salta el elemento y sigue — pero es ruido y un dato incorrecto en el panel.
+
+**Posible fix:** añadir `element.offsetParent !== null` (cuidado: falla para `position: fixed`) o
+`element.checkVisibility()` (soportado en Chrome) al filtro, además del computed style propio.
+
+### H2. `logger.warn`/`logger.error` no respetan el flag de debug
+
+`utils/logger.js:28-33`:
+```js
+warn(...args) { console.warn(...args); },
+error(...args) { console.error(...args); },
+```
+A diferencia de `log()`, no comprueban `debugEnabled`. Los warnings de H1 (y cualquier otro
+`logger.warn`/`logger.error` del código) se imprimen **siempre**, incluso con
+`a11yGoDebug` desactivado — es decir, cualquier usuaria real con la consola abierta los vería en
+producción, no solo quien active el modo debug.
+
+**Nota:** puede ser intencional (mantener warnings/errores siempre visibles es una práctica común),
+pero conviene decidirlo explícitamente en vez de que sea un efecto colateral no documentado.
 
 ---
 
@@ -183,12 +259,14 @@ Fecha: ____________  Versión/commit: ____________  Chrome: ____________
 
 | Sitio | Lector | Teclado | Visual | Validador | Observaciones |
 |---|:---:|:---:|:---:|:---:|---|
-| react.dev (SPA) | ☐ | ☐ | ☐ | ☐ | |
-| github.com (CSP) | ☐ | ☐ | ☐ | ☐ | |
-| ar.wikipedia.org (RTL) | ☐ | ☐ | ☐ | ☐ | |
-| en.wikipedia.org (DOM grande) | ☐ | ☐ | ☐ | ☐ | |
+| github.com (CSP) | ✅ | ✅ | ✅ | ✅ | Sin errores propios de consola. Teclado: ver hallazgos H1/H2. Validador: 6 errores/8 advertencias/1 info, rápido, overlays exactos |
+| bershka.com/es (e-commerce) | ⏳ | ☐ | ☐ | ☐ | Lector propuesto, sin confirmar. Errores de consola (`HeroCarousel.motion.tsx`, `useVideo.ts`) confirmados ajenos a A11yGo |
+| aevi.org.es (baseline es) | ☐ | ☐ | ☐ | ☐ | No iniciado |
+| bershka.com/sa (RTL candidato) | ☐ | ☐ | ☐ | ☐ | No iniciado — confirmar primero si el sitio sirve layout RTL real |
 
-Tiempo de validación en el DOM grande: ________ s
+Tiempo de validación en github.com: rápido, no cronometrado con precisión (percibido como pocos
+segundos). Ningún sitio de esta ronda cubre el perfil "DOM grande" — usa
+`en.wikipedia.org/wiki/World_War_II` si quieres esa señal.
 
 ---
 

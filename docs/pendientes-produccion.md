@@ -1,6 +1,6 @@
 # Pendientes antes de subir a producción (Chrome Web Store)
 
-**Última actualización:** 30 de julio de 2026
+**Última actualización:** 4 de agosto de 2026
 **Estado general:** funcional y probado en lo trabajado recientemente; **no listo para publicar todavía**.
 El único bloqueante duro (política de privacidad) ya está resuelto; quedan assets de tienda y
 recomendaciones de calidad.
@@ -40,15 +40,35 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 
 ## 2. Calidad y riesgo (recomendado antes de publicar)
 
-- [ ] **(CALIDAD) Pasada de humo manual en 3-4 sitios reales diversos**, no solo el fixture
-      sintético: una SPA (React/Vue), una página con CSP estricta, una en RTL (árabe/hebreo), y una
-      con DOM grande. Verificar que las 4 herramientas funcionan y que la validación no rompe ni
-      cuelga. Incluir la **revalidación de keyboardNav en navegador**: tras el fix del off-by-one
-      (30/07, commit `94486d8`), al activar debe enfocar el **1er** elemento del orden de tabulación
-      (antes enfocaba el 2º) y el primer Shift+Tab debe ir al último (antes iba al penúltimo).
-- [ ] **(CALIDAD) Verificación manual pendiente del scroll en iframe (cambio C):** confirmar en
-      navegador que el overlay de highlight se reposiciona al hacer scroll **dentro** de un iframe
-      same-origin. `content.js` no tiene tests unitarios; usar `test-fixtures/manual-a11y-test.html`.
+- [ ] **(CALIDAD) Pasada de humo manual en sitios reales — EN PROGRESO (04/08).** Guion completo y
+      estado detallado en [`verificacion-manual.md`](./verificacion-manual.md). Avance:
+      **github.com completo** (4/4 herramientas ✅, 2 hallazgos no bloqueantes anotados debajo).
+      Pendientes: `bershka.com/es` (Lector propuesto, sin confirmar), `aevi.org.es` (sin iniciar),
+      `bershka.com/sa` como candidato RTL (sin iniciar, sin confirmar que sirva layout RTL). Ningún
+      sitio de esta ronda cubre el perfil "DOM grande"; considerar añadir uno.
+- [ ] **(CALIDAD) Regresión keyboardNav vía fixture — sin ejecutar.** El off-by-one (fix 30/07,
+      commit `94486d8`) se verificó indirectamente en la pasada de humo de github.com (foco inicial
+      y Shift+Tab correctos), pero **falta la pasada dirigida** con el fixture rotulado
+      (`test-fixtures/manual-keyboard-test.html`, bloque 1 de `verificacion-manual.md`) que cubre
+      además los 5 casos de exclusión y el salto de elemento eliminado.
+- [ ] **(CALIDAD) Verificación manual pendiente del scroll en iframe (cambio C) — sin ejecutar.**
+      Confirmar en navegador que el overlay de highlight se reposiciona al hacer scroll **dentro**
+      de un iframe same-origin. Bloque 2 de `verificacion-manual.md`, fixture ya preparado con
+      relleno para tener scroll interno (`test-fixtures/manual-a11y-test-iframe.html`).
+- [ ] **(CALIDAD) Regresión del validador shadow DOM/iframes vía fixture — sin ejecutar.** Bloque 3
+      de `verificacion-manual.md`; ya se verificó end-to-end el 25/07 pero conviene repasarlo tras
+      los cambios en `content.js` (30/07 en adelante).
+- [ ] **(CALIDAD) Hallazgo H1 — conteo de focusables inflado en `keyboard-nav.js`.** El filtro de
+      `updateFocusableElements()` (`utils/keyboard-nav.js:112-117`) solo comprueba
+      `display`/`visibility`/`opacity` del propio elemento, no de sus ancestros — elementos dentro
+      de menús desplegables cerrados se cuentan como navegables aunque el navegador no pueda
+      enfocarlos. Reproducido en github.com (mega-menú "Enterprise"). No bloqueante: el bucle de
+      reintento se recupera solo. Detalle y log de repro en `verificacion-manual.md` § Hallazgos.
+      Posible fix: añadir `element.offsetParent !== null` o `element.checkVisibility()` al filtro.
+- [ ] **(CALIDAD) Hallazgo H2 — `logger.warn`/`logger.error` ignoran el flag de debug.**
+      `utils/logger.js:28-33`: a diferencia de `log()`, no comprueban `debugEnabled`, así que se
+      imprimen siempre en consola — cualquier usuaria real los vería, no solo en modo debug. Puede
+      ser intencional, pero conviene decidirlo explícitamente. Detalle en `verificacion-manual.md`.
 - [x] **(CALIDAD) Tests para `content.js`** — 25 tests (30/07): routing de mensajes, exclusión
       mutua, callbacks `onDeactivate`, comandos del lector, `runA11yCheck`, highlight (overlay,
       auto-remove 12s, reemplazo), handler `focusin` y contexto de extensión inválido. Ver
@@ -101,3 +121,17 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 - Sin llamadas de red propias, sin analítica, sin telemetría (auditado).
 - Exportación CSV con sanitización anti-inyección.
 - Política de privacidad completa (es/en).
+- **Verificado en navegador real (04/08):** las 4 herramientas funcionan correctamente en
+  github.com (CSP estricta) — historial, Escape limpio, overlays con posicionamiento exacto,
+  validación rápida. Detalle completo en [`verificacion-manual.md`](./verificacion-manual.md).
+
+## Para retomar la próxima sesión
+
+1. **Siguiente paso exacto:** confirmar el resultado de "Lector de Texto" en
+   `bershka.com/es/h-woman.html` (guion en `verificacion-manual.md`, sección "Estado de la pasada
+   en curso"), luego seguir con Teclado/Visual/Validador en el mismo sitio.
+2. Completar `aevi.org.es` y `bershka.com/sa` (confirmar primero si este último sirve layout RTL).
+3. Ejecutar los bloques 1-3 del guion (regresiones vía fixture en `localhost:8080`), que quedaron
+   sin tocar esta sesión.
+4. Decidir qué hacer con los hallazgos H1 y H2 (no bloquean, pero están documentados y listos para
+   convertirse en tareas si se quiere corregirlos).
