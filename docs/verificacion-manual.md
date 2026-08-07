@@ -1,34 +1,37 @@
 # Guion de verificación manual en navegador
 
-**Propósito:** cubrir lo que los tests unitarios **no pueden** cubrir. Los 265 tests corren sobre
+**Propósito:** cubrir lo que los tests unitarios **no pueden** cubrir. Los 277 tests corren sobre
 jsdom, que no calcula layout, no pinta overlays, no ejecuta la Web Speech API ni carga iframes
 reales. Todo lo de este documento requiere un Chrome de verdad y una persona mirando.
 
-**Tiempo estimado:** ~60 min · **Última actualización:** 4 de agosto de 2026
+**Tiempo estimado:** ~60 min · **Última actualización:** 7 de agosto de 2026
 
 Marca cada paso en la [hoja de resultados](#hoja-de-resultados) del final.
 
-> ## Estado de la pasada en curso (sesión 04/08/2026)
+> ## Estado de la pasada en curso (sesión 07/08/2026)
 >
-> Se ejecutó el **bloque 4** (pasada de humo) en el navegador real de la usuaria, con extensión
-> cargada sin empaquetar desde la raíz del repo. **Los bloques 1, 2 y 3 (regresiones vía fixture)
-> siguen sin ejecutar** — no se tocó `localhost:8080` en esta sesión.
+> **Los bloques 1, 2 y 3 (regresiones vía fixture) siguen sin ejecutar** — no se ha tocado
+> `localhost:8080` en ninguna sesión todavía.
 >
 > | Sitio | Lector | Teclado | Visual | Validador | Estado |
 > |---|:---:|:---:|:---:|:---:|---|
-> | github.com | ✅ | ✅ | ✅ | ✅ | **Completo**, 2 hallazgos no bloqueantes (ver abajo) |
-> | bershka.com/es/h-woman.html | ⏳ | ☐ | ☐ | ☐ | Lector propuesto, **falta confirmar el resultado** |
+> | github.com | ✅ | ✅ | ✅ | ✅ | **Completo** (04/08). Hallazgos H1 y H2, ya corregidos |
+> | bershka.com/es | ❌ | ☐ | ☐ | ☐ | **Anulada (07/08):** sesión con el content script huérfano |
 > | aevi.org.es | ☐ | ☐ | ☐ | ☐ | No iniciado |
-> | bershka.com/sa/h-woman.html (candidato RTL) | ☐ | ☐ | ☐ | ☐ | No iniciado |
+> | bershka.com/sa (candidato RTL) | ☐ | ☐ | ☐ | ☐ | No iniciado |
 >
-> **Para retomar:** siguiente paso exacto es **Lector de Texto en `bershka.com/es/h-woman.html`**
-> (pasos: activar, hover + clic en un par de elementos, confirmar idioma español sin deletreo,
-> Escape, revisar consola por errores *nuevos* — ya se sabe que `HeroCarousel.motion.tsx` y
-> `useVideo.ts` son bugs propios del bundle de Bershka, confirmado por grep en el repo, no de
-> A11yGo).
+> **Por qué se anuló Bershka.** Toda la sesión del 07/08 corrió sobre una pestaña cuyo content
+> script había quedado huérfano tras recargar la extensión (ver el aviso del bloque 0 y el
+> hallazgo H3). Con el contexto invalidado no había logs, el historial no se actualizaba y el
+> lector seguía hablando, así que **ninguna observación de esa sesión es fiable** y hay que
+> repetirla entera. Sí son válidos los dos hallazgos que salieron de ella (H3 y H4), porque
+> ambos se confirmaron leyendo el código, no observando el navegador.
 >
-> La tabla de "Sitios propuestos" de más abajo se actualizó para reflejar los sitios realmente
-> usados en esta ronda (elegidos por la usuaria) en vez de la sugerencia original.
+> **Para retomar:** empezar Bershka de cero. Recargar la extensión, **recargar la pestaña con
+> Ctrl+Shift+R**, y confirmar que el debug está activo (deben salir logs `TextReader:` en consola
+> al leer algo) **antes** de dar por buena ninguna observación. Los errores de consola
+> `HeroCarousel.motion.tsx` y `useVideo.ts` son bugs propios del bundle de Bershka, ya
+> confirmados ajenos a A11yGo; los avisos de precarga de fuentes `ABCWhyte-*.woff2`, también.
 
 | Bloque | Qué verifica | Tiempo |
 |---|---|---:|
@@ -46,7 +49,8 @@ Marca cada paso en la [hoja de resultados](#hoja-de-resultados) del final.
 |---|---|---|
 | 0.1 | En `chrome://extensions/`, activa **modo desarrollador** y pulsa **Cargar descomprimida** apuntando a la **raíz del repo** | La extensión aparece cargada, sin errores en rojo |
 | 0.2 | Arranca un servidor local desde la raíz del repo: `npx http-server -p 8080 -c-1` | Sirve en `http://localhost:8080` |
-| 0.3 | Abre la consola de la extensión y activa el debug: `chrome.storage.local.set({ a11yGoDebug: true })` | Los logs de `logger.js` dejan de estar silenciados |
+| 0.3 | Abre la consola de la extensión y activa el debug: `chrome.storage.local.set({ a11yGoDebug: true })` | Los `log()` y `warn()` de `logger.js` dejan de estar silenciados (`error()` se ve siempre, con o sin flag) |
+| 0.4 | **Comprueba que el debug llegó:** activa el Lector y lee algo; en la consola de la **página**, con el filtro en `TextReader`, deben salir varias líneas | Si no sale ninguna, el flag no ha llegado al content script: casi siempre es una pestaña huérfana → **Ctrl+Shift+R** y repite |
 
 > **No cargues `dist/`.** Es una build minificada y **congelada** (`npm run build`); si la cargas
 > estarás verificando código antiguo y las regresiones no aparecerán.
@@ -54,8 +58,18 @@ Marca cada paso en la [hoja de resultados](#hoja-de-resultados) del final.
 > **No uses `file://`.** Chrome trata cada URL `file:` como un **origen único (opaco)**, así que
 > los iframes no cargan y los bloques 2 y 3 son imposibles de verificar.
 
+> ### ⚠️ Recargar la extensión obliga a recargar TODAS las pestañas abiertas
+>
 > Tras cualquier cambio en el código o en los fixtures, recarga la extensión en
-> `chrome://extensions/` **y** la página con **Ctrl+Shift+R** (recarga dura).
+> `chrome://extensions/` **y después cada pestaña** con **Ctrl+Shift+R** (recarga dura).
+>
+> No es una recomendación de higiene: al recargar la extensión, las pestañas que ya tenían el
+> content script inyectado quedan **huérfanas** (*"Extension context invalidated"*). A partir de ahí
+> toda llamada `chrome.*` lanza, pero **el lector sigue hablando** porque la Web Speech API es del
+> navegador y no de la extensión. El resultado es una extensión que aparenta funcionar mientras el
+> panel no recibe nada y no se registra ni un log. Se perdió una sesión entera (07/08) por esto.
+>
+> Desde el 07/08 la extensión lo detecta y muestra un aviso rojo en la página; si lo ves, recarga.
 
 ---
 
@@ -187,9 +201,9 @@ cliente: [react.dev](https://react.dev), un artículo largo de
 
 ## Hallazgos registrados (no bloqueantes)
 
-Encontrados durante la pasada de humo en github.com (04/08). **Ambos corregidos el 07/08 con TDD**
-(13 tests nuevos, suite en 265); queda re-verificarlos en navegador en la próxima pasada por
-github.com. Se conserva la evidencia original de repro como referencia.
+H1 y H2 salieron de la pasada por github.com (04/08); H3, H4 y H5, de la pasada por Bershka (07/08).
+**Los cinco quedan corregidos con TDD** (25 tests nuevos, suite en 277). Todos necesitan
+re-verificación en navegador. Se conserva la evidencia original de repro.
 
 ### H1. El filtro de focusables no comprueba visibilidad de ancestros — ✅ CORREGIDO (07/08)
 
@@ -236,9 +250,86 @@ producción, no solo quien active el modo debug.
 **Nota:** puede ser intencional (mantener warnings/errores siempre visibles es una práctica común),
 pero conviene decidirlo explícitamente en vez de que sea un efecto colateral no documentado.
 
-**Fix aplicado (07/08):** decisión explícita — consola limpia en producción. `warn()` y `error()`
-comprueban ahora `debugEnabled` igual que `log()`; para diagnosticar un problema se activa
-`chrome.storage.local.set({ a11yGoDebug: true })`. Tests en `tests/logger.test.js` (7).
+**Fix aplicado (07/08), corregido el mismo día:** el primer intento silenció `warn()` **y**
+`error()`. Fue un error de criterio y se pagó caro esa misma tarde: con `error()` mudo, el
+contexto invalidado (H3, abajo) no dejó ni un rastro en consola y costó horas de diagnóstico.
+**Decisión final:** `log()` y `warn()` respetan el flag; **`error()` nunca se silencia**, porque un
+fallo real debe ser diagnosticable sin activar el debug. Tests en `tests/logger.test.js` (7).
+
+### H3. El contexto de extensión invalidado fallaba en silencio — ✅ CORREGIDO (07/08)
+
+Cuando se recarga la extensión con una página ya abierta, su content script queda huérfano y toda
+llamada `chrome.*` lanza `Extension context invalidated`. Antes del arreglo eso no producía ninguna
+señal: `logger.js` se traga la excepción en su `try/catch` (línea 9-22) y `debugEnabled` se queda en
+`false` para siempre, `safeSendMessage` hacía `return` mudo, y **el lector seguía leyendo en voz
+alta** porque la Web Speech API no depende de la extensión. Diagnóstico resultante: "lee bien pero
+no aparece nada en ningún sitio", sin una sola pista en consola.
+
+**Repro:** abrir cualquier página con A11yGo activo → recargar la extensión en `chrome://extensions/`
+→ volver a la pestaña sin recargarla. En la consola, `chrome.storage.local.get(...)` lanza
+`Uncaught Error: Extension context invalidated`.
+
+**Fix aplicado:** `isExtensionContextValid()` + `reportInvalidContext()` en `content.js`.
+`safeSendMessage` y el nuevo `safeStorageSet` lo comprueban antes de cada llamada y, al fallar,
+registran un `logger.error` y pintan **una sola vez** un aviso `role="alert"`
+(`#a11ygo-context-invalidated`, solo en el frame principal) que pide recargar la página. El texto
+sale de `i18n.t('contextInvalidated')`; `content.js` carga i18n junto al resto de módulos, con el
+contexto todavía válido, para poder traducirlo cuando ya no queden APIs. 4 tests en
+`tests/content.test.js`.
+
+### H4. El resaltado amarillo se salta elementos — ✅ CORREGIDO (07/08)
+
+Al pasar el hover, unos elementos se resaltan en amarillo y otros no, **aunque todos se leen bien**.
+Reproducido en Bershka (07/08). No es aleatorio: depende de cómo esté partido el texto en el DOM.
+
+Para **leer**, `getTextFromElement()` (`utils/text-reader.js:548-557`) concatena el texto de los
+hijos separándolos con un espacio: de `<a><span>Manga</span><span>Larga</span></a>` saca
+`"Manga Larga"`. Para **resaltar**, `highlightText()` (`utils/text-reader.js:1044-1047`) recorre los
+nodos de texto buscando uno que contenga esa cadena **entera dentro de un único nodo**:
+
+```js
+if (nodeText && nodeText.includes(text)) {
+```
+
+Ahí no hay ningún nodo con `"Manga Larga"` — hay uno con `"Manga"` y otro con `"Larga"` — así que no
+encuentra nada y no resalta, mientras la lectura funciona igual. En marcado plano (github.com)
+coincide casi siempre; en React con `<span>` anidados (Bershka) falla constantemente.
+
+**Segundo defecto en la misma función:** busca desde `document.body` y resalta **la primera
+coincidencia de toda la página**, no la del elemento que se está leyendo. Si la misma etiqueta
+aparece en un menú visible y en otro oculto, puede pintar el amarillo en el elemento equivocado.
+Tampoco atraviesa shadow DOM ni iframes.
+
+**Fix aplicado (07/08):** `highlightText(text, element)` acota la búsqueda al elemento que se está
+leyendo y, cuando el texto no cabe en ningún nodo suelto, resalta el elemento completo con
+`highlightWholeElement()`; `removeHighlight()` restaura el `style` original. El elemento viaja desde
+el hover hasta el `onstart` del utterance vía `read(text, element)` → `this.currentReadElement`.
+5 tests en `tests/text-reader.test.js`. **Re-verificar en Bershka:** todos los elementos que se leen
+deben quedar resaltados, y el amarillo debe caer siempre sobre el elemento bajo el cursor.
+
+### H5. El lector provocaba una violación de accesibilidad — ✅ CORREGIDO (07/08)
+
+Encontrado en Bershka (07/08) a partir de este aviso de Chrome:
+
+```
+Blocked aria-hidden on an element because its descendant retained focus.
+Element with focus: <h2 class="cms-slide-overlay__slide-title ... textreader-focusable">
+Ancestor with aria-hidden: <div class="swiper-slide swiper-slide-prev">
+```
+
+`textreader-focusable` es la clase que pone `makeContentElementsFocusable()`. El lector inyectaba
+`tabindex` en un `<h2>` que vivía dentro de una slide del carrusel marcada `aria-hidden="true"` (la
+diapositiva anterior, fuera de pantalla) y luego lo enfocaba. Chrome bloquea el `aria-hidden` porque
+un elemento con foco no puede ocultarse a los lectores de pantalla. Es decir: **la herramienta de
+accesibilidad provocaba el problema de accesibilidad**.
+
+Misma familia que H1 — el filtro de `text-reader.js:299-301` solo miraba `display`/`visibility`/
+`opacity` del propio elemento, sin comprobar ancestros ni `aria-hidden` — pero en un tercer sitio,
+porque el lector tiene su propia implementación separada de la de `keyboard-nav`/`visual-nav`.
+
+**Fix aplicado:** reutilizar `hasHiddenAncestor()` en ese filtro, más la comprobación de
+`aria-hidden="true"` en el propio elemento. 3 tests en `tests/text-reader.test.js`.
+**Re-verificar en Bershka:** el aviso `Blocked aria-hidden…` no debe volver a aparecer.
 
 ---
 

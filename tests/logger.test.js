@@ -6,8 +6,9 @@ import { logger } from '../utils/logger.js';
  * Tests de logger.js (logger condicional).
  *
  * El logger es un singleton de módulo: se usa setDebug() para fijar el estado
- * del flag en cada test. log, warn y error deben respetar el flag por igual —
- * en producción (debug desactivado) la consola de la página queda limpia (H2).
+ * del flag en cada test. log() y warn() respetan el flag —en producción la
+ * consola de la página queda limpia (H2)— pero error() nunca se silencia: un
+ * fallo real debe poder diagnosticarse sin activar el debug.
  */
 
 let logSpy, warnSpy, errorSpy;
@@ -38,9 +39,9 @@ describe('con debug desactivado', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('error no imprime (H2)', () => {
+  it('error SÍ imprime aunque el debug esté desactivado', () => {
     logger.error('fallo');
-    expect(errorSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith('fallo');
   });
 });
 

@@ -25,7 +25,7 @@ content.js             - Orquestador: carga módulos, gestiona activación/desac
 background.js          - Service worker (type: module): routing de mensajes, reinyección en SPAs
 utils/
   dom-utils.js         - Funciones compartidas: calculateTabOrder, compareDOMOrder, getAccessibleName, deepQuerySelectorAll (shadow DOM + baseDoc), resolveDeepSelector ( >>> shadow, ::iframe:: frames), collectFrameContexts
-  logger.js            - Logger condicional (log/warn/error silenciados en producción sin el flag de debug)
+  logger.js            - Logger condicional (log/warn silenciados sin flag de debug; error() siempre visible)
   i18n.js              - Internacionalización (es/en)
   text-reader.js       - Lector TTS con detección de idioma y navegación de contenido
   keyboard-nav.js      - Navegación Tab/Shift+Tab con orden WCAG correcto
@@ -76,6 +76,12 @@ activeTab, scripting, storage, sidePanel, webNavigation + host_permissions: <all
 - Funciones compartidas (DOM utilities) van en `utils/dom-utils.js`
 - Todo logging pasa por `utils/logger.js` — nunca usar console.log directamente
 - Debug se activa con: `chrome.storage.local.set({ a11yGoDebug: true })`
+- `logger.error()` **nunca** se silencia: un fallo real debe ser diagnosticable sin activar el debug. `log()` y `warn()` sí dependen del flag
+- Contexto de extensión invalidado (la extensión se recarga con la página abierta): `safeSendMessage`/`safeStorageSet` en `content.js` lo detectan vía `isExtensionContextValid()` y muestran **una sola vez** un aviso `role="alert"` (`#a11ygo-context-invalidated`, solo en el frame principal) con el texto `i18n.t('contextInvalidated')`. Sin él la extensión falla en silencio: el lector sigue hablando (Web Speech API no depende de la extensión) mientras el panel deja de recibir datos
+- La detección anterior es además **proactiva**: `startContextWatch()` comprueba el contexto cada 5 s mientras hay una herramienta activa (`stopContextWatch()` en `deactivateAll`). Hace falta porque leer con el hover no envía mensajes ni escribe en storage, así que una detección puramente reactiva nunca saltaría
+- Ningún módulo debe inyectar `tabindex` en elementos con ancestros ocultos o `aria-hidden`: al enfocarlos Chrome bloquea el `aria-hidden` y avisa en consola (una herramienta de accesibilidad provocando una violación). `keyboard-nav.js`, `visual-nav.js` y `makeContentElementsFocusable()` de `text-reader.js` usan todos `hasHiddenAncestor()`
+- El resaltado del lector (`highlightText(text, element)`) busca **solo dentro del elemento leído**, no en todo el documento; si el texto está repartido entre varios nodos (marcado anidado) resalta el elemento entero vía `highlightWholeElement()` en vez de no resaltar nada. `read(text, element)` propaga el elemento hasta el `onstart` del utterance
+- `content.js` carga `i18n` junto al resto de módulos —con el contexto todavía válido— para poder traducir ese aviso cuando ya no queden APIs disponibles
 - Popup muestra indicador visual (punto azul) en el botón de la función activa
 - Categorías de validación (9) configurables y persistentes en `chrome.storage.local`
 - Exportación de reportes en 3 formatos: JSON, CSV (con BOM UTF-8 y sanitización anti-inyección) y HTML
@@ -154,13 +160,13 @@ Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2
 2. Activar modo desarrollador
 3. `npm install` para dependencias de desarrollo (requiere Node 22+, declarado en `engines`)
 4. `npm run lint` — ejecutar ESLint
-5. `npm test` — ejecutar tests unitarios (265 tests)
+5. `npm test` — ejecutar tests unitarios (277 tests)
 6. `npm run build` — generar dist/ minificado para producción
 7. `npm run package` — build + generar ZIP listo para Chrome Web Store
 
 ## Testing
 - Framework: Vitest con jsdom
-- **265 tests unitarios** — todos los módulos principales cubiertos: motor de validación (parseColor, calculateContrast, rgbToLuminance, describeUnsupportedColor), utilidades DOM (calculateTabOrder, compareDOMOrder, getAccessibleName, hasHiddenAncestor), el logger condicional (`tests/logger.test.js`: log/warn/error respetan el flag de debug), traversal de shadow DOM (deepQuerySelectorAll, resolveDeepSelector, selectores >>>), auditoría de iframes (collectFrameContexts, selectores ::iframe::, checks por-documento), el orquestador `content.js` (routing de mensajes, exclusión mutua, callbacks onDeactivate, highlight con timers, handler focusin, contexto inválido), el lector `text-reader.js` (detección de idioma, formatTextForSpeech, normalización anti-deletreo, getAccessibleName/getElementType, deduplicación, reentrancia de read() vía readToken, reintento de voces), `keyboard-nav.js` (orden WCAG, navegación Tab/Shift+Tab con wrap-around, saltos de ocultos/eliminados, inyección y restauración de tabindex, tooltip, MutationObserver con debounce) y `visual-nav.js` (filtrado de contenedores no interactivos, overlays y orden numérico, highlight de foco, historial con dedup y límite de 20)
+- **277 tests unitarios** — todos los módulos principales cubiertos: motor de validación (parseColor, calculateContrast, rgbToLuminance, describeUnsupportedColor), utilidades DOM (calculateTabOrder, compareDOMOrder, getAccessibleName, hasHiddenAncestor), el logger condicional (`tests/logger.test.js`: log/warn respetan el flag, error() siempre imprime), traversal de shadow DOM (deepQuerySelectorAll, resolveDeepSelector, selectores >>>), auditoría de iframes (collectFrameContexts, selectores ::iframe::, checks por-documento), el orquestador `content.js` (routing de mensajes, exclusión mutua, callbacks onDeactivate, highlight con timers, handler focusin, contexto inválido), el lector `text-reader.js` (detección de idioma, formatTextForSpeech, normalización anti-deletreo, getAccessibleName/getElementType, deduplicación, reentrancia de read() vía readToken, reintento de voces), `keyboard-nav.js` (orden WCAG, navegación Tab/Shift+Tab con wrap-around, saltos de ocultos/eliminados, inyección y restauración de tabindex, tooltip, MutationObserver con debounce) y `visual-nav.js` (filtrado de contenedores no interactivos, overlays y orden numérico, highlight de foco, historial con dedup y límite de 20)
 - `content.js` se testea cargándolo como script de efectos: `chrome.runtime.getURL` se redirige a `tests/stubs/a11y-modules.js` (stubs de los 4 módulos) y a logger/dom-utils reales; el listener de mensajes se captura del mock de `chrome.runtime.onMessage`
 - `text-reader.js` se testea con `speechSynthesis`/`SpeechSynthesisUtterance` mockeados y fake timers para la lógica async (readToken, timer de reintento de voces, hover de 500ms)
 - `keyboard-nav.js` y `visual-nav.js` se testean stubbeando lo que jsdom no implementa (`getBoundingClientRect`, `scrollIntoView`, `ResizeObserver`, `requestAnimationFrame`); el foco real de jsdom valida la navegación completa

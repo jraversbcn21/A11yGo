@@ -375,6 +375,40 @@ describe('elementos de contenido focusables', () => {
     expect(document.querySelector('span').getAttribute('data-textreader-price')).toBe('true');
   });
 
+  it('no hace focusable contenido dentro de un contenedor aria-hidden (H5)', () => {
+    // Caso real: el carrusel de Bershka marca aria-hidden las slides fuera de
+    // pantalla. Enfocar algo ahí dentro hace que Chrome bloquee el aria-hidden.
+    document.body.innerHTML = `
+      <h1 id="visible">Título visible</h1>
+      <div class="swiper-slide-prev" aria-hidden="true">
+        <h2 id="oculto">Título de slide oculta</h2>
+      </div>
+    `;
+    reader.makeContentElementsFocusable();
+
+    expect(document.getElementById('visible').getAttribute('tabindex')).toBe('0');
+    expect(document.getElementById('oculto').hasAttribute('tabindex')).toBe(false);
+    expect(document.getElementById('oculto').classList.contains('textreader-focusable')).toBe(false);
+  });
+
+  it('no hace focusable contenido dentro de un contenedor oculto por CSS (H5)', () => {
+    document.body.innerHTML = `
+      <div style="display: none"><p id="p1">Texto oculto</p></div>
+      <div style="visibility: hidden"><p id="p2">Texto invisible</p></div>
+    `;
+    reader.makeContentElementsFocusable();
+
+    expect(document.getElementById('p1').hasAttribute('tabindex')).toBe(false);
+    expect(document.getElementById('p2').hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('tampoco si el propio elemento lleva aria-hidden="true" (H5)', () => {
+    document.body.innerHTML = '<p id="p" aria-hidden="true">Texto</p>';
+    reader.makeContentElementsFocusable();
+
+    expect(document.getElementById('p').hasAttribute('tabindex')).toBe(false);
+  });
+
   it('restoreContentElements deja el DOM como estaba', () => {
     document.body.innerHTML = '<h1>Título</h1><p>Texto</p>';
     reader.makeContentElementsFocusable();
@@ -489,6 +523,16 @@ describe('read() — síntesis y reentrancia', () => {
     utterance.onend();
     expect(reader.isReading).toBe(false);
   });
+
+  it('al arrancar la voz el resaltado usa el elemento leído (H4)', async () => {
+    document.body.innerHTML = '<a id="cat"><span>Manga</span> <span>Larga</span></a>';
+    const el = document.getElementById('cat');
+
+    await reader.read('Manga Larga', el);
+    synth.speak.mock.calls[0][0].onstart();
+
+    expect(reader.highlightedElement).toBe(el);
+  });
 });
 
 describe('controles play / pause / stop / setSpeed', () => {
@@ -598,7 +642,8 @@ describe('lectura por hover y selección', () => {
     expect(reader.read).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(500);
-    expect(reader.read).toHaveBeenCalledWith('Texto del párrafo');
+    // El elemento viaja junto al texto para que el resaltado busque dentro de él (H4)
+    expect(reader.read).toHaveBeenCalledWith('Texto del párrafo', target);
   });
 
   it('salir del elemento antes de 500ms cancela la lectura', () => {
@@ -651,5 +696,43 @@ describe('highlight de texto leído', () => {
     document.body.innerHTML = '<p>Otro contenido</p>';
     reader.highlightText('texto inexistente');
     expect(reader.highlightElements).toEqual([]);
+  });
+
+  it('resalta el elemento entero si el texto está repartido en varios nodos (H4)', () => {
+    // Marcado típico de React: la lectura concatena "Manga Larga" pero ningún
+    // nodo de texto contiene la frase completa, así que la búsqueda exacta falla
+    document.body.innerHTML = '<a id="cat"><span>Manga</span> <span>Larga</span></a>';
+    const el = document.getElementById('cat');
+
+    reader.highlightText('Manga Larga', el);
+
+    expect(el.style.backgroundColor).toBeTruthy();
+    expect(reader.highlightedElement).toBe(el);
+  });
+
+  it('removeHighlight restaura el estilo original del elemento resaltado (H4)', () => {
+    document.body.innerHTML = '<a id="cat" style="color: red"><span>Manga</span> <span>Larga</span></a>';
+    const el = document.getElementById('cat');
+
+    reader.highlightText('Manga Larga', el);
+    reader.removeHighlight();
+
+    expect(el.getAttribute('style')).toBe('color: red');
+    expect(reader.highlightedElement).toBeNull();
+  });
+
+  it('busca dentro del elemento indicado, no en la primera aparición de la página (H4)', () => {
+    // La misma etiqueta en un menú oculto antes en el DOM: no debe pintarse ahí
+    document.body.innerHTML = `
+      <div id="menu-oculto"><span>Novedades</span></div>
+      <div id="visible"><span>Novedades</span></div>
+    `;
+    const visible = document.getElementById('visible');
+
+    reader.highlightText('Novedades', visible);
+
+    expect(document.querySelector('#menu-oculto span').children.length).toBe(0);
+    expect(visible.textContent).toContain('Novedades');
+    expect(reader.highlightElements.length + (reader.highlightedElement ? 1 : 0)).toBe(1);
   });
 });

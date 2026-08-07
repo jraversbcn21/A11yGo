@@ -1,5 +1,6 @@
 // Lector de texto con Web Speech API
 import { logger } from './logger.js';
+import { hasHiddenAncestor } from './dom-utils.js';
 
 export class TextReader {
   constructor() {
@@ -12,6 +13,9 @@ export class TextReader {
     this.speed = 1.0;
     this.selectedText = '';
     this.highlightElements = [];
+    this.highlightedElement = null;
+    this.previousInlineStyle = null;
+    this.currentReadElement = null;
     this.hoverTimeout = null;
     this.hoverElement = null;
     this.lastMousePosition = null;
@@ -296,9 +300,15 @@ export class TextReader {
                                                element.className?.toLowerCase().includes('amount') ||
                                                element.className?.toLowerCase().includes('total'));
         
-        const isVisible = style.display !== 'none' && 
-                         style.visibility !== 'hidden' && 
-                         style.opacity !== '0';
+        const isVisible = style.display !== 'none' &&
+                         style.visibility !== 'hidden' &&
+                         style.opacity !== '0' &&
+                         element.getAttribute('aria-hidden') !== 'true' &&
+                         // Un ancestro oculto (p. ej. una slide de carrusel con
+                         // aria-hidden) no se refleja en el computed style del hijo.
+                         // Enfocar ahí dentro hace que Chrome bloquee el aria-hidden:
+                         // un elemento con foco no puede ocultarse a lectores de pantalla
+                         !hasHiddenAncestor(element);
         
         // No está ya focusable y no es un elemento interactivo
         const tag = element.tagName?.toUpperCase() || '';
@@ -525,7 +535,7 @@ export class TextReader {
     this.hoverTimeout = setTimeout(() => {
       if (!this.isReading && !this.isPaused) {
         this.selectedText = text.trim();
-        this.read(this.selectedText);
+        this.read(this.selectedText, element);
       }
     }, 500);
   }
@@ -653,9 +663,12 @@ export class TextReader {
     return voices.find(v => v.lang.startsWith(langPrefix)) || voices[0];
   }
 
-  async read(text) {
+  async read(text, element = null) {
     if (!this.isActive) return;
     const token = ++this.readToken;
+    // Se guarda para que el highlight busque dentro del elemento leído y no en
+    // toda la página (ver highlightText)
+    this.currentReadElement = element;
     if (!text || !text.trim()) {
       logger.warn('TextReader: No hay texto para leer');
       return;
@@ -808,7 +821,7 @@ export class TextReader {
             logger.log('TextReader: Iniciando lectura de texto');
             if (self) {
               self.isReading = true;
-              self.highlightText(text);
+              self.highlightText(text, self.currentReadElement);
             }
           } catch (e) {
             logger.error('TextReader: Error en onstart:', e);
@@ -1023,23 +1036,28 @@ export class TextReader {
     return formatted;
   }
 
-  highlightText(text) {
+  highlightText(text, element = null) {
     try {
       if (!text || !text.trim()) {
         return;
       }
-      
+
       // Limpiar highlights anteriores primero
       this.removeHighlight();
-      
-      // Buscar y resaltar el texto en la página
+
+      // Buscar solo dentro del elemento que se está leyendo: buscando en todo el
+      // documento se acaba pintando otra aparición de la misma etiqueta (p. ej.
+      // la copia del menú móvil oculto en vez del enlace visible)
+      const root = element && document.contains(element) ? element : document.body;
+
       const walker = document.createTreeWalker(
-        document.body,
+        root,
         NodeFilter.SHOW_TEXT,
         null,
         false
       );
 
+      let matched = false;
       let node;
       while (node = walker.nextNode()) {
         try {
@@ -1062,6 +1080,7 @@ export class TextReader {
               try {
                 range.surroundContents(span);
                 this.highlightElements.push(span);
+                matched = true;
                 break; // Solo resaltar la primera ocurrencia
               } catch (_) {
                 try {
@@ -1076,6 +1095,7 @@ export class TextReader {
                 } catch (e2) {
                   logger.warn('TextReader: Error al crear marcador de highlight:', e2);
                 }
+                matched = true;
                 break;
               }
             }
@@ -1085,12 +1105,47 @@ export class TextReader {
           logger.warn('TextReader: Error al procesar nodo de texto:', e);
         }
       }
+
+      // El texto leído se construye concatenando los hijos del elemento, así que
+      // en marcado anidado (<a><span>Manga</span><span>Larga</span></a>) no cabe
+      // en ningún nodo de texto suelto. Antes eso dejaba el elemento sin resaltar
+      // aunque sí se leyera; ahora se resalta el elemento entero.
+      if (!matched && element) {
+        this.highlightWholeElement(element);
+      }
     } catch (e) {
       logger.error('TextReader: Error en highlightText:', e);
     }
   }
 
+  highlightWholeElement(element) {
+    try {
+      if (!element || !element.style) return;
+      this.highlightedElement = element;
+      this.previousInlineStyle = element.getAttribute('style');
+      element.style.backgroundColor = '#ffeb3b';
+      element.style.color = '#000';
+    } catch (e) {
+      logger.warn('TextReader: Error al resaltar el elemento completo:', e);
+    }
+  }
+
   removeHighlight() {
+    // Restaurar el elemento resaltado entero (fallback de highlightText)
+    if (this.highlightedElement) {
+      try {
+        if (this.previousInlineStyle === null) {
+          this.highlightedElement.removeAttribute('style');
+        } else {
+          this.highlightedElement.setAttribute('style', this.previousInlineStyle);
+        }
+      } catch (e) {
+        logger.warn('TextReader: Error al restaurar el estilo del elemento resaltado:', e);
+      }
+      this.highlightedElement = null;
+      this.previousInlineStyle = null;
+    }
+
     try {
       if (!this.highlightElements || this.highlightElements.length === 0) {
         return;

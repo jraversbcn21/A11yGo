@@ -1,7 +1,7 @@
 /**
  * Logger condicional para A11yGo
- * En producción los logs de debug están silenciados.
- * Activar con: chrome.storage.local.set({ a11yGoDebug: true })
+ * En producción log() y warn() están silenciados; error() siempre se imprime.
+ * Activar el resto con: chrome.storage.local.set({ a11yGoDebug: true })
  */
 
 let debugEnabled = false;
@@ -28,8 +28,10 @@ export const logger = {
   warn(...args) {
     if (debugEnabled) console.warn(...args);
   },
+  // error() nunca se silencia: un fallo real debe ser diagnosticable sin
+  // activar el flag de debug (p. ej. contexto de extensión invalidado)
   error(...args) {
-    if (debugEnabled) console.error(...args);
+    console.error(...args);
   },
   setDebug(enabled) {
     debugEnabled = enabled;

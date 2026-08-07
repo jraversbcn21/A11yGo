@@ -40,12 +40,14 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 
 ## 2. Calidad y riesgo (recomendado antes de publicar)
 
-- [ ] **(CALIDAD) Pasada de humo manual en sitios reales — EN PROGRESO (04/08).** Guion completo y
+- [ ] **(CALIDAD) Pasada de humo manual en sitios reales — EN PROGRESO (07/08).** Guion completo y
       estado detallado en [`verificacion-manual.md`](./verificacion-manual.md). Avance:
-      **github.com completo** (4/4 herramientas ✅, 2 hallazgos no bloqueantes anotados debajo).
-      Pendientes: `bershka.com/es` (Lector propuesto, sin confirmar), `aevi.org.es` (sin iniciar),
-      `bershka.com/sa` como candidato RTL (sin iniciar, sin confirmar que sirva layout RTL). Ningún
-      sitio de esta ronda cubre el perfil "DOM grande"; considerar añadir uno.
+      **github.com completo** (4/4 herramientas ✅). **Bershka sin validar:** la sesión del 07/08 se
+      hizo con el content script huérfano (H3), así que sus observaciones **no son fiables** y hay
+      que repetirla entera con la pestaña recargada. De ella sí salieron tres hallazgos válidos
+      confirmados leyendo código (H3, H4 y H5). Pendientes: `bershka.com/es` (repetir), `aevi.org.es`
+      (sin iniciar), `bershka.com/sa` como candidato RTL (sin iniciar, sin confirmar que sirva
+      layout RTL). Ningún sitio de esta ronda cubre el perfil "DOM grande"; considerar añadir uno.
 - [ ] **(CALIDAD) Regresión keyboardNav vía fixture — sin ejecutar.** El off-by-one (fix 30/07,
       commit `94486d8`) se verificó indirectamente en la pasada de humo de github.com (foco inicial
       y Shift+Tab correctos), pero **falta la pasada dirigida** con el fixture rotulado
@@ -65,10 +67,37 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
       (antes duplicaba el recorrido a mano). 6 tests nuevos (5 del helper + 1 de integración).
       **Pendiente re-verificar en github.com** (mega-menú "Enterprise") en la próxima pasada manual.
 - [x] **(CALIDAD) Hallazgo H2 — `logger.warn`/`logger.error` ignoran el flag de debug.** Corregido
-      el 07/08: ambos comprueban ahora `debugEnabled` igual que `log()` — con debug desactivado la
-      consola de la página queda limpia para usuarias reales. Decisión explícita: se prioriza
-      consola limpia en producción; para diagnosticar, activar `a11yGoDebug`. 7 tests nuevos en
-      `tests/logger.test.js`.
+      el 07/08 en dos pasos. El primer intento silenció `warn()` **y** `error()`, y fue un error de
+      criterio: esa misma tarde, con `error()` mudo, el contexto invalidado (H3) no dejó rastro en
+      consola y costó horas de diagnóstico. **Decisión final:** `log()` y `warn()` respetan el flag;
+      **`error()` nunca se silencia**. 7 tests en `tests/logger.test.js`.
+- [x] **(CALIDAD) Hallazgo H3 — el contexto de extensión invalidado fallaba en silencio.** Al
+      recargar la extensión con una página abierta, su content script queda huérfano y toda llamada
+      `chrome.*` lanza; el lector seguía hablando (Web Speech API no depende de la extensión)
+      mientras el panel no recibía nada y no se registraba ni un log. Corregido el 07/08:
+      `isExtensionContextValid()` + `reportInvalidContext()` en `content.js`, con aviso `role="alert"`
+      mostrado una sola vez en el frame principal y texto vía `i18n.t('contextInvalidated')`.
+      4 tests en `tests/content.test.js`. Detalle en `verificacion-manual.md` § H3.
+- [x] **(CALIDAD) Hallazgo H4 — el resaltado amarillo del lector se salta elementos.** Los elementos
+      se leían bien pero solo algunos se resaltaban: `highlightText()` buscaba la cadena completa
+      dentro de **un único nodo de texto**, mientras que la lectura la construye concatenando varios
+      hijos, así que en marcado anidado (React) no encontraba nunca coincidencia. Además resaltaba la
+      primera aparición de **toda la página**, no la del elemento leído. Corregido el 07/08:
+      `highlightText(text, element)` busca solo dentro del elemento y, si el texto está repartido
+      entre nodos, resalta el elemento entero (`highlightWholeElement()`); `removeHighlight()`
+      restaura el estilo original. `read(text, element)` propaga el elemento hasta el `onstart`.
+      5 tests en `tests/text-reader.test.js`.
+- [x] **(CALIDAD) Hallazgo H5 — el lector provocaba una violación de accesibilidad.**
+      `makeContentElementsFocusable()` inyectaba `tabindex` en elementos dentro de contenedores
+      `aria-hidden` (las slides fuera de pantalla del carrusel de Bershka) y luego los enfocaba;
+      Chrome bloquea el `aria-hidden` porque un elemento con foco no puede ocultarse a lectores de
+      pantalla, y avisa en consola. Misma familia que H1, en un tercer sitio con implementación
+      propia. Corregido el 07/08 reutilizando `hasHiddenAncestor()` + comprobación de
+      `aria-hidden="true"` en el propio elemento. 3 tests en `tests/text-reader.test.js`.
+- [x] **(CALIDAD) Detección proactiva del contexto invalidado.** El aviso de H3 solo saltaba cuando
+      algo intentaba usar la API, y leer con el hover no envía mensajes ni escribe en storage — una
+      usuaria leyendo con el ratón nunca se habría enterado. Añadido `startContextWatch()`
+      (comprobación cada 5 s mientras hay una herramienta activa). 1 test en `tests/content.test.js`.
 - [x] **(CALIDAD) Tests para `content.js`** — 25 tests (30/07): routing de mensajes, exclusión
       mutua, callbacks `onDeactivate`, comandos del lector, `runA11yCheck`, highlight (overlay,
       auto-remove 12s, reemplazo), handler `focusin` y contexto de extensión inválido. Ver
@@ -106,13 +135,13 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 | `utils/logger.js` | 44 | ✅ cubierto (log/warn/error respetan el flag de debug) |
 | `utils/i18n.js` | 190 | parcial |
 
-**Total: 265 tests** — todos los módulos principales tienen cobertura.
+**Total: 277 tests** — todos los módulos principales tienen cobertura.
 
 ## Lo que sí está listo
 
 - Las 3 mejoras de robustez (shadow DOM, colores modernos oklch/lab, iframes same-origin)
   implementadas, probadas y **verificadas end-to-end en navegador real**.
-- **265 tests unitarios** — los 7 módulos principales con cobertura (sesión del 30/07: content.js,
+- **277 tests unitarios** — los 7 módulos principales con cobertura (sesión del 30/07: content.js,
   text-reader.js, keyboard-nav.js y visual-nav.js; sesión del 07/08: logger.js y
   hasHiddenAncestor). El proceso destapó y corrigió un off-by-one real en la activación de
   keyboardNav.
@@ -137,7 +166,10 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 2. Completar `aevi.org.es` y `bershka.com/sa` (confirmar primero si este último sirve layout RTL).
 3. Ejecutar los bloques 1-3 del guion (regresiones vía fixture en `localhost:8080`), que quedaron
    sin tocar esta sesión.
-4. ~~Decidir qué hacer con los hallazgos H1 y H2~~ — **corregidos el 07/08** (ver entradas de
-   calidad arriba). En la próxima pasada manual por github.com, re-verificar que el contador de
-   navegables ya no cuenta los enlaces del mega-menú cerrado y que la consola queda limpia sin
-   el flag de debug.
+4. ~~Decidir qué hacer con los hallazgos~~ — **H1 a H5 corregidos el 07/08** (ver entradas de
+   calidad arriba). Lo que queda es **re-verificarlos en navegador**, todos con la pestaña recargada:
+   en github.com, que el contador de navegables ya no cuenta los enlaces del mega-menú cerrado; en
+   Bershka, que no reaparece el aviso `Blocked aria-hidden…` (H5) y que **todos** los elementos que
+   se leen quedan resaltados sobre el elemento correcto (H4); y en cualquier sitio, que al recargar
+   la extensión sin recargar la pestaña sale el aviso rojo de contexto invalidado (H3) — debe
+   aparecer solo, sin tocar nada, en menos de 5 segundos.

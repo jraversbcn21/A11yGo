@@ -18,7 +18,7 @@ import process from 'node:process';
 // Bajo jsdom import.meta.url es http://localhost/..., inutilizable para el loader
 // ESM nativo: construir URLs file:// desde la raíz del repo (cwd de vitest)
 const STUB_URL = pathToFileURL(resolve(process.cwd(), 'tests/stubs/a11y-modules.js')).href;
-const REAL_MODULES = ['utils/logger.js', 'utils/dom-utils.js'];
+const REAL_MODULES = ['utils/logger.js', 'utils/dom-utils.js', 'utils/i18n.js'];
 const realModuleUrl = (path) => pathToFileURL(resolve(process.cwd(), path)).href;
 
 function stubs() {
@@ -309,5 +309,71 @@ describe('content.js — orquestador', () => {
       document.dispatchEvent(new Event('focusin'));
       expect(sidebarMessages('updateFocus')).toHaveLength(0);
     });
+  });
+});
+
+describe('content.js — contexto invalidado en caliente', () => {
+  const REAL_ID = chrome.runtime.id;
+
+  beforeEach(async () => {
+    await loadContentScript();
+  });
+
+  afterEach(() => {
+    // Restaurar el contexto y limpiar el aviso entre tests
+    chrome.runtime.id = REAL_ID;
+    document.querySelectorAll('#a11ygo-context-invalidated').forEach(el => el.remove());
+  });
+
+  it('avisa en la página cuando la extensión se recarga con la página abierta', async () => {
+    chrome.runtime.id = null;
+
+    await dispatch({ action: 'activate', function: 'textReader' });
+
+    const notice = document.getElementById('a11ygo-context-invalidated');
+    expect(notice).not.toBeNull();
+    expect(notice.getAttribute('role')).toBe('alert');
+    // El texto sale de i18n: acepta cualquiera de los dos idiomas
+    expect(notice.textContent.toLowerCase()).toMatch(/recarga|reload/);
+  });
+
+  it('no duplica el aviso aunque falle varias veces', async () => {
+    chrome.runtime.id = null;
+
+    await dispatch({ action: 'activate', function: 'textReader' });
+    await dispatch({ action: 'activate', function: 'keyboardNav' });
+
+    expect(document.querySelectorAll('#a11ygo-context-invalidated')).toHaveLength(1);
+  });
+
+  it('avisa también cuando lo que falla es una escritura en storage', async () => {
+    chrome.runtime.id = null;
+
+    // onDeactivate solo escribe en storage (no notifica al sidebar): aísla safeStorageSet
+    stubs().textReader.onDeactivate();
+
+    expect(document.getElementById('a11ygo-context-invalidated')).not.toBeNull();
+  });
+
+  it('detecta el contexto invalidado aunque nada intente usar la API', async () => {
+    vi.useFakeTimers();
+    try {
+      await dispatch({ action: 'activate', function: 'textReader' });
+      chrome.runtime.id = null;
+
+      // Nadie envía mensajes ni escribe en storage (el hover del lector no lo
+      // hace): solo pasa el tiempo. La vigilancia debe detectarlo igualmente.
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(document.getElementById('a11ygo-context-invalidated')).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('no muestra ningún aviso mientras el contexto sigue siendo válido', async () => {
+    await dispatch({ action: 'activate', function: 'textReader' });
+
+    expect(document.getElementById('a11ygo-context-invalidated')).toBeNull();
   });
 });

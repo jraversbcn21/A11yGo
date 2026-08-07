@@ -11,6 +11,7 @@ if (window.a11yGoContentScriptLoaded) {
   let visualNav = null;
   let a11yChecker = null;
   let resolveDeepSelector = null;
+  let i18n = null;
   let logger = { log() {}, warn: console.warn.bind(console), error: console.error.bind(console) };
 
   // Promesa que se resuelve cuando los módulos están cargados
@@ -37,6 +38,20 @@ if (window.a11yGoContentScriptLoaded) {
       const domUtilsModule = await import(chrome.runtime.getURL('utils/dom-utils.js'));
       resolveDeepSelector = domUtilsModule.resolveDeepSelector;
 
+      // i18n se carga aquí, con el contexto todavía válido, para poder traducir
+      // el aviso de contexto invalidado cuando ya no queden APIs disponibles
+      const i18nModule = await import(chrome.runtime.getURL('utils/i18n.js'));
+      i18n = i18nModule.i18n;
+      const stored = await new Promise(resolve => {
+        try {
+          chrome.storage.local.get('language', result => resolve(result || {}));
+        } catch (_) {
+          resolve({});
+        }
+      });
+      const browserLang = navigator.language?.split('-')[0];
+      await i18n.init(stored.language || (browserLang === 'en' ? 'en' : 'es'));
+
       textReader = new TextReader();
       keyboardNav = new KeyboardNav();
       visualNav = new VisualNav();
@@ -45,19 +60,19 @@ if (window.a11yGoContentScriptLoaded) {
 
       textReader.onDeactivate = () => {
         activeFunctions.delete('textReader');
-        chrome.storage.local.set({ activePanel: 'default' });
+        safeStorageSet({ activePanel: 'default' });
       };
       keyboardNav.onDeactivate = () => {
         activeFunctions.delete('keyboardNav');
-        chrome.storage.local.set({ activePanel: 'default' });
+        safeStorageSet({ activePanel: 'default' });
       };
       visualNav.onDeactivate = () => {
         activeFunctions.delete('visualNav');
-        chrome.storage.local.set({ activePanel: 'default' });
+        safeStorageSet({ activePanel: 'default' });
       };
       a11yChecker.onDeactivate = () => {
         activeFunctions.delete('a11yCheck');
-        chrome.storage.local.set({ activePanel: 'default' });
+        safeStorageSet({ activePanel: 'default' });
       };
 
       logger.log('A11yGo: Módulos cargados correctamente');
@@ -88,17 +103,105 @@ if (window.a11yGoContentScriptLoaded) {
     }
   })();
 
+  const CONTEXT_NOTICE_ID = 'a11ygo-context-invalidated';
+  let contextInvalidatedReported = false;
+
+  function isExtensionContextValid() {
+    return !!(window.chrome && chrome.runtime && chrome.runtime.id);
+  }
+
+  // El contexto se invalida cuando la extensión se recarga o actualiza con la
+  // página ya abierta: a partir de ahí toda llamada chrome.* lanza. Sin aviso
+  // la extensión parece funcionar (el lector habla, porque la Web Speech API no
+  // depende de la extensión) mientras el panel deja de recibir datos.
+  function reportInvalidContext() {
+    if (contextInvalidatedReported) return;
+    contextInvalidatedReported = true;
+    logger.error('A11yGo: contexto de extensión invalidado. Recarga la página para seguir usándola.');
+    showContextInvalidatedNotice();
+  }
+
+  // Vigilancia proactiva mientras haya una herramienta activa. Sin esto el aviso
+  // solo saltaría cuando algo intenta usar la API (mensaje al panel o escritura
+  // en storage), y leer con el hover no hace ninguna de las dos cosas: la
+  // usuaria se quedaría con la extensión muerta sin enterarse.
+  const CONTEXT_WATCH_INTERVAL_MS = 5000;
+  let contextWatchTimer = null;
+
+  function startContextWatch() {
+    if (contextWatchTimer) return;
+    contextWatchTimer = setInterval(() => {
+      if (!isExtensionContextValid()) {
+        reportInvalidContext();
+        stopContextWatch();
+      }
+    }, CONTEXT_WATCH_INTERVAL_MS);
+  }
+
+  function stopContextWatch() {
+    if (contextWatchTimer) {
+      clearInterval(contextWatchTimer);
+      contextWatchTimer = null;
+    }
+  }
+
+  function showContextInvalidatedNotice() {
+    // Solo en el frame principal: en iframes se duplicaría el aviso
+    if (window !== window.top) return;
+    if (!document.body || document.getElementById(CONTEXT_NOTICE_ID)) return;
+    try {
+      const notice = document.createElement('div');
+      notice.id = CONTEXT_NOTICE_ID;
+      notice.setAttribute('role', 'alert');
+      notice.textContent = i18n
+        ? i18n.t('contextInvalidated')
+        : 'A11yGo se ha desconectado. Recarga la página para seguir usándola.';
+      notice.style.cssText = [
+        'position: fixed',
+        'top: 16px',
+        'right: 16px',
+        'z-index: 2147483647',
+        'max-width: 320px',
+        'padding: 12px 16px',
+        'background: #b3261e',
+        'color: #fff',
+        'font: 14px/1.4 system-ui, sans-serif',
+        'border-radius: 6px',
+        'box-shadow: 0 2px 8px rgba(0,0,0,0.3)'
+      ].join(';');
+      document.body.appendChild(notice);
+    } catch (e) {
+      logger.error('A11yGo: no se pudo mostrar el aviso de contexto invalidado:', e);
+    }
+  }
+
   // Envío seguro de mensajes al service worker/side panel
   function safeSendMessage(payload) {
-    // Evita errores cuando el contexto de la extensión se ha invalidado
-    if (!window.chrome || !chrome.runtime || !chrome.runtime.id) return;
+    if (!isExtensionContextValid()) {
+      reportInvalidContext();
+      return;
+    }
     try {
       chrome.runtime.sendMessage(payload, () => {
         // Silenciar errores benignos (p. ej., receptor inexistente)
         void chrome.runtime?.lastError;
       });
     } catch (_) {
-      // Ignorar si el contexto se invalidó en mitad de la operación
+      // El contexto se invalidó en mitad de la operación
+      reportInvalidContext();
+    }
+  }
+
+  // Escritura segura en storage: también lanza con el contexto invalidado
+  function safeStorageSet(values) {
+    if (!isExtensionContextValid()) {
+      reportInvalidContext();
+      return;
+    }
+    try {
+      chrome.storage.local.set(values);
+    } catch (_) {
+      reportInvalidContext();
     }
   }
 
@@ -221,15 +324,17 @@ if (window.a11yGoContentScriptLoaded) {
     
     deactivateAll();
     activeFunctions.add(functionName);
+    startContextWatch();
     module.activate();
     notifySidebar('switchPanel', { panel });
-    chrome.storage.local.set({ activePanel: functionName });
+    safeStorageSet({ activePanel: functionName });
     logger.log(`A11yGo: Función ${functionName} activada correctamente`);
     return true;
   }
 
   function deactivateAll() {
     activeFunctions.clear();
+    stopContextWatch();
     textReader?.deactivate();
     keyboardNav?.deactivate();
     visualNav?.deactivate();
@@ -250,7 +355,7 @@ if (window.a11yGoContentScriptLoaded) {
         textReader.stop();
         // Desactivar completamente TODO el modo accesibilidad
         deactivateAll();
-        chrome.storage.local.set({ activePanel: 'default' });
+        safeStorageSet({ activePanel: 'default' });
         notifySidebar('switchPanel', { panel: 'default' });
         break;
     }
