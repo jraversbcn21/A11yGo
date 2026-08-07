@@ -25,7 +25,7 @@ content.js             - Orquestador: carga módulos, gestiona activación/desac
 background.js          - Service worker (type: module): routing de mensajes, reinyección en SPAs
 utils/
   dom-utils.js         - Funciones compartidas: calculateTabOrder, compareDOMOrder, getAccessibleName, deepQuerySelectorAll (shadow DOM + baseDoc), resolveDeepSelector ( >>> shadow, ::iframe:: frames), collectFrameContexts
-  logger.js            - Logger condicional (debug silenciado en producción)
+  logger.js            - Logger condicional (log/warn/error silenciados en producción sin el flag de debug)
   i18n.js              - Internacionalización (es/en)
   text-reader.js       - Lector TTS con detección de idioma y navegación de contenido
   keyboard-nav.js      - Navegación Tab/Shift+Tab con orden WCAG correcto
@@ -42,6 +42,7 @@ tests/
   text-reader.test.js  - Tests del lector TTS: idioma, formateo, nombres accesibles, deduplicación, readToken
   keyboard-nav.test.js - Tests de navegación Tab/Shift+Tab: orden WCAG, saltos, tabindex inyectado, tooltip
   visual-nav.test.js   - Tests de overlays visuales: filtrado de focusables, orden numérico, historial
+  logger.test.js       - Tests del logger condicional: log/warn/error respetan el flag de debug
   stubs/a11y-modules.js - Stubs de los 4 módulos de herramientas (registran llamadas sin depender de vitest)
 test-fixtures/         - Páginas HTML para verificación manual en navegador (shadow DOM + iframes); ver test-fixtures/README.md
 .github/workflows/     - CI: lint + tests + build en cada push y PR a master (ci.yml)
@@ -153,13 +154,13 @@ Los 63 criterios restantes requieren juicio humano (multimedia 1.2.x, timing 2.2
 2. Activar modo desarrollador
 3. `npm install` para dependencias de desarrollo (requiere Node 22+, declarado en `engines`)
 4. `npm run lint` — ejecutar ESLint
-5. `npm test` — ejecutar tests unitarios (252 tests)
+5. `npm test` — ejecutar tests unitarios (265 tests)
 6. `npm run build` — generar dist/ minificado para producción
 7. `npm run package` — build + generar ZIP listo para Chrome Web Store
 
 ## Testing
 - Framework: Vitest con jsdom
-- **252 tests unitarios** — todos los módulos principales cubiertos: motor de validación (parseColor, calculateContrast, rgbToLuminance, describeUnsupportedColor), utilidades DOM (calculateTabOrder, compareDOMOrder, getAccessibleName), traversal de shadow DOM (deepQuerySelectorAll, resolveDeepSelector, selectores >>>), auditoría de iframes (collectFrameContexts, selectores ::iframe::, checks por-documento), el orquestador `content.js` (routing de mensajes, exclusión mutua, callbacks onDeactivate, highlight con timers, handler focusin, contexto inválido), el lector `text-reader.js` (detección de idioma, formatTextForSpeech, normalización anti-deletreo, getAccessibleName/getElementType, deduplicación, reentrancia de read() vía readToken, reintento de voces), `keyboard-nav.js` (orden WCAG, navegación Tab/Shift+Tab con wrap-around, saltos de ocultos/eliminados, inyección y restauración de tabindex, tooltip, MutationObserver con debounce) y `visual-nav.js` (filtrado de contenedores no interactivos, overlays y orden numérico, highlight de foco, historial con dedup y límite de 20)
+- **265 tests unitarios** — todos los módulos principales cubiertos: motor de validación (parseColor, calculateContrast, rgbToLuminance, describeUnsupportedColor), utilidades DOM (calculateTabOrder, compareDOMOrder, getAccessibleName, hasHiddenAncestor), el logger condicional (`tests/logger.test.js`: log/warn/error respetan el flag de debug), traversal de shadow DOM (deepQuerySelectorAll, resolveDeepSelector, selectores >>>), auditoría de iframes (collectFrameContexts, selectores ::iframe::, checks por-documento), el orquestador `content.js` (routing de mensajes, exclusión mutua, callbacks onDeactivate, highlight con timers, handler focusin, contexto inválido), el lector `text-reader.js` (detección de idioma, formatTextForSpeech, normalización anti-deletreo, getAccessibleName/getElementType, deduplicación, reentrancia de read() vía readToken, reintento de voces), `keyboard-nav.js` (orden WCAG, navegación Tab/Shift+Tab con wrap-around, saltos de ocultos/eliminados, inyección y restauración de tabindex, tooltip, MutationObserver con debounce) y `visual-nav.js` (filtrado de contenedores no interactivos, overlays y orden numérico, highlight de foco, historial con dedup y límite de 20)
 - `content.js` se testea cargándolo como script de efectos: `chrome.runtime.getURL` se redirige a `tests/stubs/a11y-modules.js` (stubs de los 4 módulos) y a logger/dom-utils reales; el listener de mensajes se captura del mock de `chrome.runtime.onMessage`
 - `text-reader.js` se testea con `speechSynthesis`/`SpeechSynthesisUtterance` mockeados y fake timers para la lógica async (readToken, timer de reintento de voces, hover de 500ms)
 - `keyboard-nav.js` y `visual-nav.js` se testean stubbeando lo que jsdom no implementa (`getBoundingClientRect`, `scrollIntoView`, `ResizeObserver`, `requestAnimationFrame`); el foco real de jsdom valida la navegación completa

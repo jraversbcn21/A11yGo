@@ -58,6 +58,24 @@ describe('updateFocusableElements', () => {
     expect(tags).toEqual(['Enlace', 'Botón', 'INPUT']);
   });
 
+  it('excluye elementos dentro de contenedores ocultos por un ancestro (H1)', () => {
+    document.body.innerHTML = `
+      <button id="visible">Visible</button>
+      <div style="display: none">
+        <a href="#" id="menu-cerrado">Enlace en menú cerrado</a>
+      </div>
+      <div style="visibility: hidden">
+        <button id="invisible">Botón en contenedor invisible</button>
+      </div>
+      <div aria-hidden="true">
+        <button id="aria-oculto">Botón en aria-hidden</button>
+      </div>
+    `;
+    nav.updateFocusableElements();
+
+    expect(nav.focusableElements.map(el => el.id)).toEqual(['visible']);
+  });
+
   it('ordena según la spec WCAG: tabindex positivo primero, luego orden DOM', () => {
     document.body.innerHTML = `
       <button id="natural">Natural</button>

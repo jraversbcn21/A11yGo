@@ -185,6 +185,27 @@ export function getAccessibleName(element) {
 }
 
 /**
+ * Comprueba si algún ancestro oculta al elemento (display:none,
+ * visibility:hidden o aria-hidden="true"). Necesario porque getComputedStyle
+ * sobre el propio elemento no refleja el display:none de un contenedor.
+ */
+export function hasHiddenAncestor(element) {
+  const doc = element.ownerDocument;
+  const win = doc?.defaultView || window;
+  let parent = element.parentElement;
+  while (parent && parent !== doc.body) {
+    const style = win.getComputedStyle(parent);
+    if (style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        parent.getAttribute('aria-hidden') === 'true') {
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  return false;
+}
+
+/**
  * Recolecta recursivamente los shadow roots abiertos del árbol,
  * en orden de documento (host antes que su contenido).
  * Límite de profundidad defensivo para árboles patológicos.

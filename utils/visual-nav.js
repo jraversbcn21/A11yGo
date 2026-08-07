@@ -1,5 +1,5 @@
 // Modo de navegación visual
-import { calculateTabOrder, compareDOMOrder, getAccessibleName } from './dom-utils.js';
+import { calculateTabOrder, compareDOMOrder, getAccessibleName, hasHiddenAncestor } from './dom-utils.js';
 import { logger } from './logger.js';
 
 export class VisualNav {
@@ -153,15 +153,8 @@ export class VisualNav {
     }
     
     // Verificar si el elemento está dentro de un contenedor oculto
-    let parent = element.parentElement;
-    while (parent && parent !== document.body) {
-      const parentStyle = window.getComputedStyle(parent);
-      if (parentStyle.display === 'none' || 
-          parentStyle.visibility === 'hidden' ||
-          parent.getAttribute('aria-hidden') === 'true') {
-        return false;
-      }
-      parent = parent.parentElement;
+    if (hasHiddenAncestor(element)) {
+      return false;
     }
     
     // EXCLUIR DIVs y otros elementos contenedores que no son interactivos por sí mismos

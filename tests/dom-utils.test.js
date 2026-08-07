@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateTabOrder, compareDOMOrder, getAccessibleName } from '../utils/dom-utils.js';
+import { calculateTabOrder, compareDOMOrder, getAccessibleName, hasHiddenAncestor } from '../utils/dom-utils.js';
 
 describe('compareDOMOrder', () => {
   it('returns 0 for same element', () => {
@@ -178,5 +178,33 @@ describe('getAccessibleName', () => {
     img.setAttribute('alt', 'Icon');
     link.appendChild(img);
     expect(getAccessibleName(link)).toBe('Icon');
+  });
+});
+
+describe('hasHiddenAncestor', () => {
+  it('returns false for an element with no hidden ancestors', () => {
+    document.body.innerHTML = '<div><button id="btn">Ok</button></div>';
+    expect(hasHiddenAncestor(document.getElementById('btn'))).toBe(false);
+  });
+
+  it('returns true when an ancestor has display: none', () => {
+    document.body.innerHTML = '<div style="display: none"><button id="btn">Oculto</button></div>';
+    expect(hasHiddenAncestor(document.getElementById('btn'))).toBe(true);
+  });
+
+  it('returns true when an ancestor has visibility: hidden', () => {
+    document.body.innerHTML = '<div style="visibility: hidden"><button id="btn">Oculto</button></div>';
+    expect(hasHiddenAncestor(document.getElementById('btn'))).toBe(true);
+  });
+
+  it('returns true when an ancestor has aria-hidden="true"', () => {
+    document.body.innerHTML = '<div aria-hidden="true"><button id="btn">Oculto</button></div>';
+    expect(hasHiddenAncestor(document.getElementById('btn'))).toBe(true);
+  });
+
+  it('detects the hidden ancestor even when it is not the direct parent', () => {
+    document.body.innerHTML =
+      '<div style="display: none"><section><span><button id="btn">Oculto</button></span></section></div>';
+    expect(hasHiddenAncestor(document.getElementById('btn'))).toBe(true);
   });
 });

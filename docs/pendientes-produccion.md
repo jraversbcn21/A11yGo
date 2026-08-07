@@ -1,6 +1,6 @@
 # Pendientes antes de subir a producción (Chrome Web Store)
 
-**Última actualización:** 4 de agosto de 2026
+**Última actualización:** 7 de agosto de 2026
 **Estado general:** funcional y probado en lo trabajado recientemente; **no listo para publicar todavía**.
 El único bloqueante duro (política de privacidad) ya está resuelto; quedan assets de tienda y
 recomendaciones de calidad.
@@ -58,17 +58,17 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 - [ ] **(CALIDAD) Regresión del validador shadow DOM/iframes vía fixture — sin ejecutar.** Bloque 3
       de `verificacion-manual.md`; ya se verificó end-to-end el 25/07 pero conviene repasarlo tras
       los cambios en `content.js` (30/07 en adelante).
-- [ ] **(CALIDAD) Hallazgo H1 — conteo de focusables inflado en `keyboard-nav.js`.** El filtro de
-      `updateFocusableElements()` (`utils/keyboard-nav.js:112-117`) solo comprueba
-      `display`/`visibility`/`opacity` del propio elemento, no de sus ancestros — elementos dentro
-      de menús desplegables cerrados se cuentan como navegables aunque el navegador no pueda
-      enfocarlos. Reproducido en github.com (mega-menú "Enterprise"). No bloqueante: el bucle de
-      reintento se recupera solo. Detalle y log de repro en `verificacion-manual.md` § Hallazgos.
-      Posible fix: añadir `element.offsetParent !== null` o `element.checkVisibility()` al filtro.
-- [ ] **(CALIDAD) Hallazgo H2 — `logger.warn`/`logger.error` ignoran el flag de debug.**
-      `utils/logger.js:28-33`: a diferencia de `log()`, no comprueban `debugEnabled`, así que se
-      imprimen siempre en consola — cualquier usuaria real los vería, no solo en modo debug. Puede
-      ser intencional, pero conviene decidirlo explícitamente. Detalle en `verificacion-manual.md`.
+- [x] **(CALIDAD) Hallazgo H1 — conteo de focusables inflado en `keyboard-nav.js`.** Corregido el
+      07/08 con TDD: nuevo helper compartido `hasHiddenAncestor()` en `utils/dom-utils.js` (recorre
+      ancestros buscando `display:none`, `visibility:hidden` o `aria-hidden="true"`), usado en el
+      filtro de `updateFocusableElements()`. `visual-nav.js` refactorizado para usar el mismo helper
+      (antes duplicaba el recorrido a mano). 6 tests nuevos (5 del helper + 1 de integración).
+      **Pendiente re-verificar en github.com** (mega-menú "Enterprise") en la próxima pasada manual.
+- [x] **(CALIDAD) Hallazgo H2 — `logger.warn`/`logger.error` ignoran el flag de debug.** Corregido
+      el 07/08: ambos comprueban ahora `debugEnabled` igual que `log()` — con debug desactivado la
+      consola de la página queda limpia para usuarias reales. Decisión explícita: se prioriza
+      consola limpia en producción; para diagnosticar, activar `a11yGoDebug`. 7 tests nuevos en
+      `tests/logger.test.js`.
 - [x] **(CALIDAD) Tests para `content.js`** — 25 tests (30/07): routing de mensajes, exclusión
       mutua, callbacks `onDeactivate`, comandos del lector, `runA11yCheck`, highlight (overlay,
       auto-remove 12s, reemplazo), handler `focusin` y contexto de extensión inválido. Ver
@@ -98,22 +98,26 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 | Módulo | Líneas | Tests |
 |---|---:|---|
 | `utils/a11y-checker.js` | 1052 | ✅ cubierto (motor de validación) |
-| `utils/dom-utils.js` | 340 | ✅ cubierto (DOM, shadow, iframes) |
+| `utils/dom-utils.js` | 361 | ✅ cubierto (DOM, shadow, iframes, visibilidad de ancestros) |
 | `utils/text-reader.js` | 1914 | ✅ cubierto (lógica pura, DOM y async con mocks de speechSynthesis) |
-| `utils/keyboard-nav.js` | 832 | ✅ cubierto (navegación, orden WCAG, tabindex inyectado) |
+| `utils/keyboard-nav.js` | 835 | ✅ cubierto (navegación, orden WCAG, tabindex inyectado) |
 | `utils/visual-nav.js` | 774 | ✅ cubierto (overlays, filtrado, historial) |
 | `content.js` | 608 | ✅ cubierto (orquestador: mensajería, activación, highlight) |
-| `utils/i18n.js` / `logger.js` | 234 | parcial / trivial |
+| `utils/logger.js` | 44 | ✅ cubierto (log/warn/error respetan el flag de debug) |
+| `utils/i18n.js` | 190 | parcial |
 
-**Total: 252 tests** — todos los módulos principales tienen cobertura.
+**Total: 265 tests** — todos los módulos principales tienen cobertura.
 
 ## Lo que sí está listo
 
 - Las 3 mejoras de robustez (shadow DOM, colores modernos oklch/lab, iframes same-origin)
   implementadas, probadas y **verificadas end-to-end en navegador real**.
-- **252 tests unitarios** — los 7 módulos principales con cobertura (sesión del 30/07: content.js,
-  text-reader.js, keyboard-nav.js y visual-nav.js). El proceso destapó y corrigió un off-by-one
-  real en la activación de keyboardNav.
+- **265 tests unitarios** — los 7 módulos principales con cobertura (sesión del 30/07: content.js,
+  text-reader.js, keyboard-nav.js y visual-nav.js; sesión del 07/08: logger.js y
+  hasHiddenAncestor). El proceso destapó y corrigió un off-by-one real en la activación de
+  keyboardNav.
+- **Hallazgos H1 y H2 de la pasada de humo corregidos** (07/08) con TDD: filtro de focusables con
+  visibilidad de ancestros (helper compartido con visual-nav) y logger silencioso sin flag de debug.
 - **CI en GitHub Actions** (`.github/workflows/ci.yml`): npm ci + lint + tests + build en cada
   push/PR a master. Primera ejecución verde el 30/07 (tras sincronizar `package-lock.json`).
 - Lint en 0 errores / 0 warnings; convenciones consistentes.
@@ -133,5 +137,7 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 2. Completar `aevi.org.es` y `bershka.com/sa` (confirmar primero si este último sirve layout RTL).
 3. Ejecutar los bloques 1-3 del guion (regresiones vía fixture en `localhost:8080`), que quedaron
    sin tocar esta sesión.
-4. Decidir qué hacer con los hallazgos H1 y H2 (no bloquean, pero están documentados y listos para
-   convertirse en tareas si se quiere corregirlos).
+4. ~~Decidir qué hacer con los hallazgos H1 y H2~~ — **corregidos el 07/08** (ver entradas de
+   calidad arriba). En la próxima pasada manual por github.com, re-verificar que el contador de
+   navegables ya no cuenta los enlaces del mega-menú cerrado y que la consola queda limpia sin
+   el flag de debug.

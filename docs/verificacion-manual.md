@@ -1,6 +1,6 @@
 # Guion de verificación manual en navegador
 
-**Propósito:** cubrir lo que los tests unitarios **no pueden** cubrir. Los 252 tests corren sobre
+**Propósito:** cubrir lo que los tests unitarios **no pueden** cubrir. Los 265 tests corren sobre
 jsdom, que no calcula layout, no pinta overlays, no ejecuta la Web Speech API ni carga iframes
 reales. Todo lo de este documento requiere un Chrome de verdad y una persona mirando.
 
@@ -187,10 +187,11 @@ cliente: [react.dev](https://react.dev), un artículo largo de
 
 ## Hallazgos registrados (no bloqueantes)
 
-Encontrados durante la pasada de humo en github.com (04/08). Ninguno impide publicar — la
-herramienta se recupera sola en ambos casos — pero conviene corregirlos en algún momento.
+Encontrados durante la pasada de humo en github.com (04/08). **Ambos corregidos el 07/08 con TDD**
+(13 tests nuevos, suite en 265); queda re-verificarlos en navegador en la próxima pasada por
+github.com. Se conserva la evidencia original de repro como referencia.
 
-### H1. El filtro de focusables no comprueba visibilidad de ancestros
+### H1. El filtro de focusables no comprueba visibilidad de ancestros — ✅ CORREGIDO (07/08)
 
 `utils/keyboard-nav.js:112-117` (`updateFocusableElements`) solo mira `display`/`visibility`/
 `opacity` del **propio elemento** vía `getComputedStyle`. Si un elemento está dentro de un
@@ -211,10 +212,16 @@ en cadena para varios índices consecutivos (el bloque de enlaces del menú cerr
 probablemente por encima del real). El recorrido **no se atasca** — el bucle de reintento
 (`attempts++`) salta el elemento y sigue — pero es ruido y un dato incorrecto en el panel.
 
-**Posible fix:** añadir `element.offsetParent !== null` (cuidado: falla para `position: fixed`) o
-`element.checkVisibility()` (soportado en Chrome) al filtro, además del computed style propio.
+**Fix aplicado (07/08):** helper compartido `hasHiddenAncestor()` en `utils/dom-utils.js` — recorre
+los ancestros hasta `body` buscando `display:none`, `visibility:hidden` o `aria-hidden="true"` —
+añadido al filtro de `updateFocusableElements()`. Se descartaron las alternativas anotadas:
+`offsetParent` falla con `position: fixed` (y siempre es `null` en jsdom, lo que impedía testearlo)
+y `checkVisibility()` no está en jsdom. `visual-nav.js` ya hacía este recorrido a mano; ahora usa
+el mismo helper. Tests: 5 del helper (`tests/dom-utils.test.js`) + 1 de integración
+(`tests/keyboard-nav.test.js`). **Re-verificar en github.com:** el contador de navegables no debe
+incluir los enlaces del mega-menú "Enterprise" cerrado ni aparecer los reintentos en consola.
 
-### H2. `logger.warn`/`logger.error` no respetan el flag de debug
+### H2. `logger.warn`/`logger.error` no respetan el flag de debug — ✅ CORREGIDO (07/08)
 
 `utils/logger.js:28-33`:
 ```js
@@ -228,6 +235,10 @@ producción, no solo quien active el modo debug.
 
 **Nota:** puede ser intencional (mantener warnings/errores siempre visibles es una práctica común),
 pero conviene decidirlo explícitamente en vez de que sea un efecto colateral no documentado.
+
+**Fix aplicado (07/08):** decisión explícita — consola limpia en producción. `warn()` y `error()`
+comprueban ahora `debugEnabled` igual que `log()`; para diagnosticar un problema se activa
+`chrome.storage.local.set({ a11yGoDebug: true })`. Tests en `tests/logger.test.js` (7).
 
 ---
 

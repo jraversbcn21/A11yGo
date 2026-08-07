@@ -1,5 +1,5 @@
 // Sistema de navegación por teclado
-import { calculateTabOrder, compareDOMOrder, getAccessibleName } from './dom-utils.js';
+import { calculateTabOrder, compareDOMOrder, getAccessibleName, hasHiddenAncestor } from './dom-utils.js';
 import { logger } from './logger.js';
 
 export class KeyboardNav {
@@ -110,11 +110,14 @@ export class KeyboardNav {
       }
       
       const style = window.getComputedStyle(el);
-      return style.display !== 'none' && 
-             style.visibility !== 'hidden' && 
+      return style.display !== 'none' &&
+             style.visibility !== 'hidden' &&
              style.opacity !== '0' &&
              !el.hasAttribute('disabled') &&
-             !el.hasAttribute('aria-hidden');
+             !el.hasAttribute('aria-hidden') &&
+             // El computed style no propaga el display:none de un contenedor
+             // (p. ej. un menú desplegable cerrado): hay que mirar los ancestros
+             !hasHiddenAncestor(el);
     });
 
     // Ordenar según el orden real de tabulación

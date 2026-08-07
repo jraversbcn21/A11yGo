@@ -26,10 +26,10 @@ export const logger = {
     if (debugEnabled) console.log(...args);
   },
   warn(...args) {
-    console.warn(...args);
+    if (debugEnabled) console.warn(...args);
   },
   error(...args) {
-    console.error(...args);
+    if (debugEnabled) console.error(...args);
   },
   setDebug(enabled) {
     debugEnabled = enabled;
