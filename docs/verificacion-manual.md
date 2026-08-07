@@ -11,14 +11,8 @@ Marca cada paso en la [hoja de resultados](#hoja-de-resultados) del final.
 > ## Estado de la pasada en curso (sesión 07/08/2026)
 >
 > **Los bloques 1, 2 y 3 (regresiones vía fixture) siguen sin ejecutar** — no se ha tocado
-> `localhost:8080` en ninguna sesión todavía.
->
-> | Sitio | Lector | Teclado | Visual | Validador | Estado |
-> |---|:---:|:---:|:---:|:---:|---|
-> | github.com | ✅ | ✅ | ✅ | ✅ | **Completo** (04/08). Hallazgos H1 y H2, ya corregidos |
-> | bershka.com/es | ❌ | ☐ | ☐ | ☐ | **Anulada (07/08):** sesión con el content script huérfano |
-> | aevi.org.es | ☐ | ☐ | ☐ | ☐ | No iniciado |
-> | bershka.com/sa (candidato RTL) | ☐ | ☐ | ☐ | ☐ | No iniciado |
+> `localhost:8080` en ninguna sesión todavía. El estado por sitio del bloque 4 está en la
+> [hoja de resultados](#bloque-4-humo) del final, que es la única fuente de verdad.
 >
 > **Por qué se anuló Bershka.** Toda la sesión del 07/08 corrió sobre una pestaña cuyo content
 > script había quedado huérfano tras recargar la extensión (ver el aviso del bloque 0 y el
@@ -361,14 +355,24 @@ Fecha: ____________  Versión/commit: ____________  Chrome: ____________
 
 | Sitio | Lector | Teclado | Visual | Validador | Observaciones |
 |---|:---:|:---:|:---:|:---:|---|
-| github.com (CSP) | ✅ | ✅ | ✅ | ✅ | Sin errores propios de consola. Teclado: ver hallazgos H1/H2. Validador: 6 errores/8 advertencias/1 info, rápido, overlays exactos |
-| bershka.com/es (e-commerce) | ⏳ | ☐ | ☐ | ☐ | Lector propuesto, sin confirmar. Errores de consola (`HeroCarousel.motion.tsx`, `useVideo.ts`) confirmados ajenos a A11yGo |
+| github.com (CSP) | ✅ | ✅ | ✅ | ✅ | 04/08. Sin errores propios de consola. Validador: 6 errores/8 advertencias/1 info, rápido, overlays exactos. De aquí salieron H1 y H2 |
+| bershka.com/es (e-commerce) | ❌ | ☐ | ☐ | ☐ | **Anulada (07/08): pestaña huérfana, repetir de cero.** De aquí salieron H3, H4 y H5, válidos por confirmarse en código. Los errores `HeroCarousel.motion.tsx` / `useVideo.ts` y los avisos de precarga `ABCWhyte-*.woff2` son de Bershka, no nuestros |
 | aevi.org.es (baseline es) | ☐ | ☐ | ☐ | ☐ | No iniciado |
 | bershka.com/sa (RTL candidato) | ☐ | ☐ | ☐ | ☐ | No iniciado — confirmar primero si el sitio sirve layout RTL real |
 
 Tiempo de validación en github.com: rápido, no cronometrado con precisión (percibido como pocos
 segundos). Ningún sitio de esta ronda cubre el perfil "DOM grande" — usa
 `en.wikipedia.org/wiki/World_War_II` si quieres esa señal.
+
+### Re-verificación de los hallazgos corregidos
+
+| Hallazgo | Qué confirmar | Resultado |
+|---|---|---|
+| H1 | En github.com, el contador de navegables no incluye el mega-menú "Enterprise" cerrado ni salen reintentos en consola | ☐ ✅ ☐ ❌ |
+| H2 | Con el debug apagado, un `logger.error` sigue viéndose en consola | ☐ ✅ ☐ ❌ |
+| H3 | Recargar la extensión sin recargar la pestaña saca el aviso rojo solo, en menos de 5 s | ✅ **07/08** |
+| H4 | Todos los elementos leídos quedan resaltados, y el amarillo cae sobre el elemento del cursor | ✅ **07/08** |
+| H5 | En Bershka no reaparece `Blocked aria-hidden…` en consola | ☐ ✅ ☐ ❌ |
 
 ---
 
@@ -384,5 +388,6 @@ segundos). Ningún sitio de esta ronda cubre el perfil "DOM grande" — usa
 
 ## Cuando todo pase
 
-Marca como completadas en [`pendientes-produccion.md`](./pendientes-produccion.md) las dos entradas
-de **(CALIDAD)** de la sección 2 y adjunta esta hoja rellena al commit de cierre.
+Marca como completadas en [`pendientes-produccion.md`](./pendientes-produccion.md) las entradas de
+**(CALIDAD)** de la sección 2 que queden abiertas (las de regresiones vía fixture y la pasada de
+humo) y adjunta esta hoja rellena al commit de cierre.

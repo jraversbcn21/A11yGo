@@ -107,6 +107,9 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
       deduplicación, reentrancia de `read()` (`readToken`), reintento de voces, focusables
       temporales, hover/selección y highlight. Ver `tests/text-reader.test.js`.
 
+> Los números de tests de las entradas siguientes son los del día en que se escribieron; el recuento
+> actual por módulo está en la [tabla de cobertura](#cobertura-de-tests-actual-contexto).
+
 ## 3. Deuda menor (no bloquea, anotada para no perderla)
 
 - [x] **(MENOR) Tests para `keyboard-nav.js` y `visual-nav.js`** — 43 tests (30/07). El test de
@@ -124,29 +127,40 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 
 ## Cobertura de tests actual (contexto)
 
-| Módulo | Líneas | Tests |
-|---|---:|---|
-| `utils/a11y-checker.js` | 1052 | ✅ cubierto (motor de validación) |
-| `utils/dom-utils.js` | 361 | ✅ cubierto (DOM, shadow, iframes, visibilidad de ancestros) |
-| `utils/text-reader.js` | 1914 | ✅ cubierto (lógica pura, DOM y async con mocks de speechSynthesis) |
-| `utils/keyboard-nav.js` | 835 | ✅ cubierto (navegación, orden WCAG, tabindex inyectado) |
-| `utils/visual-nav.js` | 774 | ✅ cubierto (overlays, filtrado, historial) |
-| `content.js` | 608 | ✅ cubierto (orquestador: mensajería, activación, highlight) |
-| `utils/logger.js` | 44 | ✅ cubierto (log/warn/error respetan el flag de debug) |
-| `utils/i18n.js` | 190 | parcial |
+Líneas y número de tests verificados contra el repo el 07/08 (commit `60b2c8f`).
 
-**Total: 277 tests** — todos los módulos principales tienen cobertura.
+| Módulo | Líneas | Tests | Cobertura |
+|---|---:|---:|---|
+| `utils/text-reader.js` | 1969 | 82 | ✅ lógica pura, DOM y async con mocks de speechSynthesis |
+| `utils/a11y-checker.js` | 1052 | 40 | ✅ motor de validación |
+| `utils/keyboard-nav.js` | 835 | 23 | ✅ navegación, orden WCAG, tabindex inyectado |
+| `utils/visual-nav.js` | 767 | 21 | ✅ overlays, filtrado, historial |
+| `content.js` | 713 | 30 | ✅ orquestador: mensajería, activación, highlight, contexto invalidado |
+| `utils/dom-utils.js` | 361 | 74 | ✅ DOM, shadow DOM, iframes, visibilidad de ancestros |
+| `utils/i18n.js` | 192 | — | ❌ sin tests propios |
+| `utils/logger.js` | 46 | 7 | ✅ log/warn respetan el flag; error() siempre imprime |
+| `sidebar.js` | 641 | — | ❌ sin tests propios |
+| `popup.js` | 174 | — | ❌ sin tests propios |
+| `background.js` | 61 | — | ❌ sin tests propios |
+
+Los 74 de `dom-utils.js` se reparten entre `dom-utils.test.js` (21), `shadow-dom.test.js` (43) e
+`iframe.test.js` (10); los 30 de `content.js`, entre `content.test.js` (26) y
+`content-failure.test.js` (4).
+
+**Total: 277 tests.** Los módulos con lógica están cubiertos; `sidebar.js`, `popup.js`,
+`background.js` e `i18n.js` no tienen tests propios — es la deuda de cobertura que queda.
 
 ## Lo que sí está listo
 
 - Las 3 mejoras de robustez (shadow DOM, colores modernos oklch/lab, iframes same-origin)
   implementadas, probadas y **verificadas end-to-end en navegador real**.
-- **277 tests unitarios** — los 7 módulos principales con cobertura (sesión del 30/07: content.js,
-  text-reader.js, keyboard-nav.js y visual-nav.js; sesión del 07/08: logger.js y
-  hasHiddenAncestor). El proceso destapó y corrigió un off-by-one real en la activación de
-  keyboardNav.
-- **Hallazgos H1 y H2 de la pasada de humo corregidos** (07/08) con TDD: filtro de focusables con
-  visibilidad de ancestros (helper compartido con visual-nav) y logger silencioso sin flag de debug.
+- **277 tests unitarios** — todos los módulos con lógica cubiertos. El proceso destapó y corrigió
+  bugs reales: un off-by-one en la activación de keyboardNav (30/07) y los cinco hallazgos de las
+  pasadas manuales (07/08).
+- **Hallazgos H1 a H5 corregidos** (07/08) con TDD: visibilidad de ancestros al filtrar focusables
+  (helper `hasHiddenAncestor()` compartido por los tres módulos), logger con `error()` siempre
+  visible, detección del contexto de extensión invalidado con aviso en página, resaltado del lector
+  acotado al elemento leído, y el lector ya no hace focusables elementos dentro de `aria-hidden`.
 - **CI en GitHub Actions** (`.github/workflows/ci.yml`): npm ci + lint + tests + build en cada
   push/PR a master. Primera ejecución verde el 30/07 (tras sincronizar `package-lock.json`).
 - Lint en 0 errores / 0 warnings; convenciones consistentes.
@@ -160,16 +174,40 @@ Leyenda: `[x]` hecho · `[ ]` pendiente · **(BLOQUEANTE)** impide el envío a l
 
 ## Para retomar la próxima sesión
 
-1. **Siguiente paso exacto:** confirmar el resultado de "Lector de Texto" en
-   `bershka.com/es/h-woman.html` (guion en `verificacion-manual.md`, sección "Estado de la pasada
-   en curso"), luego seguir con Teclado/Visual/Validador en el mismo sitio.
-2. Completar `aevi.org.es` y `bershka.com/sa` (confirmar primero si este último sirve layout RTL).
-3. Ejecutar los bloques 1-3 del guion (regresiones vía fixture en `localhost:8080`), que quedaron
-   sin tocar esta sesión.
-4. ~~Decidir qué hacer con los hallazgos~~ — **H1 a H5 corregidos el 07/08** (ver entradas de
-   calidad arriba). Lo que queda es **re-verificarlos en navegador**, todos con la pestaña recargada:
-   en github.com, que el contador de navegables ya no cuenta los enlaces del mega-menú cerrado; en
-   Bershka, que no reaparece el aviso `Blocked aria-hidden…` (H5) y que **todos** los elementos que
-   se leen quedan resaltados sobre el elemento correcto (H4); y en cualquier sitio, que al recargar
-   la extensión sin recargar la pestaña sale el aviso rojo de contexto invalidado (H3) — debe
-   aparecer solo, sin tocar nada, en menos de 5 segundos.
+Estado al cerrar el 07/08: **código y tests al día** (277 en verde, lint 0/0, CI verde, todo
+commiteado y pusheado). Lo que queda es **verificación manual y trámites de tienda** — no hay
+ninguna corrección de código pendiente.
+
+**Antes de tocar nada:** recarga la extensión y **después la pestaña con Ctrl+Shift+R**, y comprueba
+el paso 0.4 del guion (que salgan logs `TextReader:` en consola). Sin eso, cualquier observación es
+papel mojado — así se perdió la sesión del 07/08.
+
+1. **Re-verificar en navegador los cinco arreglos** (todos son de código ya escrito y testeado; solo
+   falta confirmarlos en Chrome). Detalle de qué mirar en cada uno en `verificacion-manual.md`
+   § Hallazgos:
+   - **H1** en github.com: el contador "Elementos navegables" ya no debe contar los enlaces del
+     mega-menú "Enterprise" cerrado, ni salir la cascada de reintentos en consola.
+   - **H3** en cualquier sitio: recargar la extensión sin recargar la pestaña debe hacer aparecer el
+     aviso rojo **solo, sin tocar nada, en menos de 5 s**. *(Ya confirmado el 07/08 — repetir solo
+     si se toca `content.js`.)*
+   - **H4** en Bershka: todos los elementos que se leen deben quedar resaltados, y el amarillo
+     siempre sobre el elemento bajo el cursor. *(Ya confirmado el 07/08.)*
+   - **H5** en Bershka: el aviso `Blocked aria-hidden…` no debe reaparecer.
+2. **Repetir la pasada de humo de Bershka entera** — la del 07/08 está anulada (corrió sobre una
+   pestaña huérfana). Las 4 herramientas, con el guion del bloque 4.
+3. **Completar `aevi.org.es`** y decidir el sitio RTL: confirmar primero si `bershka.com/sa` sirve
+   layout en árabe; si no, usar `ar.wikipedia.org`.
+4. **Ejecutar los bloques 1-3 del guion** (regresiones vía fixture en `localhost:8080`). Siguen sin
+   tocarse desde que se escribieron: cubren el off-by-one de keyboardNav, el scroll dentro de
+   iframes y el validador de shadow DOM/iframes.
+5. **Trámites de la Web Store** (sección 1): capturas, URL pública de la política, cuenta de
+   desarrollador, justificación de permisos y `npm run package`. Es lo único que bloquea publicar.
+
+### Deuda conocida que no bloquea
+
+- `sidebar.js`, `popup.js`, `background.js` e `i18n.js` no tienen tests propios.
+- Observación abierta del bloque 1 del guion: el filtro excluye por **presencia** del atributo
+  `aria-hidden`, no por su valor, así que un `aria-hidden="false"` queda excluido aunque signifique
+  «no oculto». Decidir si merece la pena comparar el valor.
+- La build de `dist/` es del 30/07 y está **obsoleta**: hay que regenerarla con `npm run package`
+  antes de subir nada a la tienda.

@@ -33,7 +33,7 @@ utils/
   a11y-checker.js      - Motor de validación (imágenes, contraste, gradientes, forms, headings, ARIA, etc.)
 tests/
   setup.js             - Mocks de Chrome API y CSS.escape para jsdom
-  dom-utils.test.js    - Tests de calculateTabOrder, compareDOMOrder, getAccessibleName
+  dom-utils.test.js    - Tests de calculateTabOrder, compareDOMOrder, getAccessibleName, hasHiddenAncestor
   a11y-checker.test.js - Tests de parseColor, rgbToLuminance, calculateContrast
   shadow-dom.test.js   - Tests de traversal shadow DOM, selectores >>> y heurística de shadow cerrado
   iframe.test.js       - Tests de collectFrameContexts, selectores ::iframe:: y auditoría por-documento
@@ -42,7 +42,7 @@ tests/
   text-reader.test.js  - Tests del lector TTS: idioma, formateo, nombres accesibles, deduplicación, readToken
   keyboard-nav.test.js - Tests de navegación Tab/Shift+Tab: orden WCAG, saltos, tabindex inyectado, tooltip
   visual-nav.test.js   - Tests de overlays visuales: filtrado de focusables, orden numérico, historial
-  logger.test.js       - Tests del logger condicional: log/warn/error respetan el flag de debug
+  logger.test.js       - Tests del logger condicional: log/warn respetan el flag, error() siempre imprime
   stubs/a11y-modules.js - Stubs de los 4 módulos de herramientas (registran llamadas sin depender de vitest)
 test-fixtures/         - Páginas HTML para verificación manual en navegador (shadow DOM + iframes); ver test-fixtures/README.md
 .github/workflows/     - CI: lint + tests + build en cada push y PR a master (ci.yml)
@@ -210,3 +210,22 @@ Las 30 incidencias documentadas en **[`docs/archive/bugfix-plan-2026-07.md`](./d
 - CSV: prefijo `'` en celdas con `=+-@\t\r` + BOM `\uFEFF`
 - Historial lector con dedup funcional; `storage.onChanged` en sidebar y logger
 - Strings de UI migrados a `i18n.t()`; MutationObserver debounce cancelado correctamente
+
+## Hallazgos de las pasadas manuales en navegador (Ago 2026)
+
+Cinco bugs que **ningún test unitario podía destapar**: salieron de usar la extensión en sitios
+reales (github.com el 04/08, bershka.com el 07/08). Todos corregidos con TDD y documentados con su
+reproducción en [`docs/verificacion-manual.md`](./docs/verificacion-manual.md) § Hallazgos.
+
+| # | Problema | Corrección |
+|---|---|---|
+| H1 | El filtro de focusables no miraba los ancestros: contaba como navegables elementos dentro de menús desplegables cerrados | Helper compartido `hasHiddenAncestor()` en `dom-utils.js`, usado por `keyboard-nav`, `visual-nav` y `text-reader` |
+| H2 | `warn()`/`error()` ignoraban el flag de debug | `log()` y `warn()` lo respetan; **`error()` nunca se silencia** |
+| H3 | Con el contexto de extensión invalidado, A11yGo fallaba en silencio absoluto | `isExtensionContextValid()` + aviso en página, con vigilancia proactiva cada 5 s |
+| H4 | El resaltado del lector se saltaba elementos con el texto repartido entre varios nodos | `highlightText(text, element)` acotado al elemento leído, con resaltado del elemento completo como fallback |
+| H5 | El lector inyectaba `tabindex` dentro de contenedores `aria-hidden` y Chrome bloqueaba el `aria-hidden` | `hasHiddenAncestor()` también en `makeContentElementsFocusable()` |
+
+**Lección operativa que costó una sesión entera:** recargar la extensión deja huérfanos los content
+scripts de las pestañas ya abiertas. A partir de ahí toda llamada `chrome.*` lanza, pero el lector
+sigue hablando porque la Web Speech API no depende de la extensión — la extensión aparenta
+funcionar mientras no registra nada. **Tras recargar la extensión, recargar siempre las pestañas.**
